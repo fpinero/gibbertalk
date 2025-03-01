@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GibberLink Translator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Cargar ggwave.js -->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/ggwave.js') }}"></script>
+    <!-- Añadir favicon para evitar el error 404 -->
+    <link rel="icon" href="data:,">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Traductor de Texto a GibberLink</h1>
+        <textarea id="inputText" placeholder="Ingrese texto para traducir..."></textarea>
+        <button id="translateBtn">Traducir</button>
+        
+        <div id="status" style="margin-top: 20px; text-align: center; color: #666;">
+            Inicializando componentes de audio...
+        </div>
+    </div>
+    
+    <!-- Cargar script.js -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html> 
