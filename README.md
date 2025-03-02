@@ -2,6 +2,10 @@
 
 ![GibberSound Logo](static/favicon/favicon-32x32.png)
 
+## Versión preliminar disponible
+
+**¡Ya puedes probar GibberSound en línea!** Visita [https://gibbersound.com](https://gibbersound.com) para experimentar con la versión preliminar de la aplicación.
+
 ## Descripción
 
 GibberSound es una aplicación web que utiliza el protocolo ggwave para convertir texto en señales de audio, similar a cómo los sistemas de IA se comunican entre sí. Esta aplicación permite a los usuarios enviar mensajes codificados a través de sonido, creando una forma única e innovadora de comunicación.
