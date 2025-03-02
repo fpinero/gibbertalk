@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gibbersound-ingress
+  namespace: gibbersound
+  annotations:
+    # Anotaciones específicas de Traefik si son necesarias
+    # traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: "gibbersound.com"  # Reemplaza con tu dominio real
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: gibbersound-frontend
+            port:
+              number: 80
+  - host: "www.gibbersound.com"  # Reemplaza con tu dominio real con www
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: gibbersound-frontend
+            port:
+              number: 80 

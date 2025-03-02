@@ -1,6 +1,6 @@
-# Despliegue de GibberSound en Kubernetes
+# Despliegue de GibberSound en Kubernetes (k3s)
 
-Este directorio contiene los archivos necesarios para desplegar GibberSound en un clúster de Kubernetes con nodos ARM.
+Este directorio contiene los archivos necesarios para desplegar GibberSound en un clúster de k3s con nodos ARM.
 
 ## Estructura de archivos
 
@@ -12,14 +12,16 @@ Este directorio contiene los archivos necesarios para desplegar GibberSound en u
 - `backend-service.yaml`: Manifiesto de Kubernetes para el servicio del backend
 - `frontend-deployment.yaml`: Manifiesto de Kubernetes para el deployment del frontend
 - `frontend-service.yaml`: Manifiesto de Kubernetes para el servicio del frontend
+- `ingress.yaml`: Manifiesto para configurar el Ingress con Traefik
 - `deploy.sh`: Script para facilitar la construcción y despliegue
 
 ## Requisitos previos
 
 - Docker instalado y configurado
-- kubectl instalado y configurado para conectarse a tu clúster de Kubernetes
-- Un clúster de Kubernetes con nodos ARM64
+- kubectl instalado y configurado para conectarse a tu clúster de k3s
+- Un clúster de k3s con nodos ARM64
 - Cuenta en DockerHub (usuario: fpinero)
+- Un dominio configurado para apuntar a la IP del nodo master de k3s
 
 ## Flujo de trabajo para el despliegue
 
@@ -58,9 +60,9 @@ docker push fpinero/gibbersound-frontend:latest
 > ```
 > En ese caso, recuerda actualizar los archivos de deployment para usar la versión específica.
 
-### 3. Desplegar en Kubernetes
+### 3. Desplegar en Kubernetes (k3s)
 
-Una vez que las imágenes estén disponibles en DockerHub, puedes desplegar la aplicación en Kubernetes:
+Una vez que las imágenes estén disponibles en DockerHub, puedes desplegar la aplicación en k3s:
 
 ```bash
 # Si no has ejecutado el script deploy.sh o has respondido 'n' a la pregunta de despliegue
@@ -73,16 +75,33 @@ kubectl apply -f k8s/backend-deployment.yaml
 kubectl apply -f k8s/backend-service.yaml
 kubectl apply -f k8s/frontend-deployment.yaml
 kubectl apply -f k8s/frontend-service.yaml
+
+# Configurar el Ingress (asegúrate de editar el archivo para usar tu dominio)
+kubectl apply -f k8s/ingress.yaml
 ```
 
-### 4. Verificar el despliegue
+### 4. Configuración DNS
+
+Para que la aplicación sea accesible a través de tu dominio, necesitas configurar registros DNS:
+
+1. Configura un registro A para `tudominio.com` que apunte a la IP del nodo master de k3s
+2. Configura un registro A para `www.tudominio.com` que apunte a la misma IP
+
+Si usas CloudFlare:
+1. Activa el proxy (icono naranja) para obtener HTTPS automáticamente
+2. No es necesario configurar Let's Encrypt, ya que CloudFlare proporciona el certificado SSL
+
+### 5. Verificar el despliegue
 
 ```bash
 # Verificar que los pods están funcionando
 kubectl get pods -n gibbersound -l app=gibbersound
 
-# Obtener la IP externa para acceder a la aplicación
-kubectl get service -n gibbersound gibbersound-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+# Verificar los servicios
+kubectl get services -n gibbersound
+
+# Verificar el Ingress
+kubectl get ingress -n gibbersound
 ```
 
 ## Personalización
@@ -93,6 +112,7 @@ Si necesitas personalizar la configuración, puedes modificar los siguientes arc
 - Para ajustar los recursos asignados a los pods: edita los campos `resources` en los archivos de deployment
 - Para cambiar el número de réplicas: edita el campo `replicas` en los archivos de deployment
 - Para usar una versión específica de las imágenes: edita el campo `image` en los archivos de deployment
+- Para cambiar el dominio: edita el archivo `ingress.yaml`
 
 ## Solución de problemas
 
@@ -103,8 +123,12 @@ kubectl logs -n gibbersound -l app=gibbersound,tier=backend
 kubectl logs -n gibbersound -l app=gibbersound,tier=frontend
 ```
 
-Para reiniciar los deployments:
+Para verificar el estado del Ingress:
+```bash
+kubectl describe ingress -n gibbersound gibbersound-ingress
+```
 
+Para reiniciar los deployments:
 ```bash
 kubectl rollout restart deployment -n gibbersound gibbersound-backend
 kubectl rollout restart deployment -n gibbersound gibbersound-frontend

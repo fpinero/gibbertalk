@@ -12,7 +12,16 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el código de la aplicación
-COPY . .
+# Primero copiamos solo app.py para verificar que existe
+COPY app.py .
+# Luego copiamos el resto de los archivos
+COPY static /app/static
+COPY templates /app/templates
+
+# Verificar que app.py existe
+RUN ls -la /app && \
+    echo "Verificando que app.py existe:" && \
+    if [ -f /app/app.py ]; then echo "app.py encontrado"; else echo "app.py NO encontrado" && exit 1; fi
 
 # Exponer el puerto que usa Flask
 EXPOSE 5000
