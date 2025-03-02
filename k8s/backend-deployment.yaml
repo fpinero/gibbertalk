@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gibbersound-backend
+  namespace: gibbersound
   labels:
     app: gibbersound
     tier: backend
@@ -19,8 +20,8 @@ spec:
     spec:
       containers:
       - name: gibbersound-backend
-        image: gibbersound-backend:latest
-        imagePullPolicy: IfNotPresent
+        image: fpinero/gibbersound-backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         resources:
