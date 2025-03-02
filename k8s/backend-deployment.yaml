@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gibbersound-backend
+  labels:
+    app: gibbersound
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gibbersound
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: gibbersound
+        tier: backend
+    spec:
+      containers:
+      - name: gibbersound-backend
+        image: gibbersound-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      nodeSelector:
+        kubernetes.io/arch: arm64 

@@ -1,23 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>GibberLink Translator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GibberSound Translator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Favicons - Actualizado para la nueva ubicación -->
+    <link rel="icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='favicon/site.webmanifest') }}">
     <!-- Cargar ggwave.js -->
     <script type="text/javascript" src="{{ url_for('static', filename='js/ggwave.js') }}"></script>
-    <!-- Añadir favicon para evitar el error 404 -->
-    <link rel="icon" href="data:,">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Fuentes de Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- Iconos de Material Design -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>Traductor de Texto a GibberLink</h1>
-        <textarea id="inputText" placeholder="Ingrese texto para traducir..."></textarea>
-        <button id="translateBtn">Traducir</button>
+        <header>
+            <h1>GibberSound</h1>
+            <p class="subtitle">AI Sound Communication Protocol</p>
+        </header>
         
-        <div id="status" style="margin-top: 20px; text-align: center; color: #666;">
-            Inicializando componentes de audio...
-        </div>
+        <main>
+            <div class="card">
+                <div class="input-group">
+                    <label for="inputText">Enter your message:</label>
+                    <textarea id="inputText" placeholder="Type your message here..."></textarea>
+                </div>
+                
+                <button id="translateBtn" class="btn-send">
+                    <span class="material-icons">send</span>
+                    <span class="btn-text">Send</span>
+                </button>
+                
+                <div id="status" class="status">
+                    Initializing audio components...
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h2>About GibberSound</h2>
+                <p>GibberSound uses the ggwave protocol to convert text into audio signals, similar to how AI systems communicate with each other.</p>
+            </div>
+        </main>
+        
+        <footer>
+            <p>&copy; 2025 GibberSound - Proof of Concept | <a href="mailto:gibbersoundapp@gmail.com" class="contact-link">Contact</a></p>
+        </footer>
     </div>
     
     <!-- Cargar script.js -->
