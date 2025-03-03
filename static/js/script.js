@@ -3,29 +3,44 @@ let context = null;
 let ggwave = null;
 let parameters = null;
 let instance = null;
+let statusTimeout = null; // Variable para controlar el timeout del mensaje de estado
 
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM cargado - Inicializando ggwave');
+    console.log('DOM loaded - Initializing ggwave');
     
     // Inicializar ggwave
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
     window.OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    
+    // Función para limpiar el mensaje de estado después de un tiempo
+    function clearStatusAfterDelay(delay = 3000) {
+        // Limpiar cualquier timeout existente
+        if (statusTimeout) {
+            clearTimeout(statusTimeout);
+        }
+        
+        // Establecer un nuevo timeout
+        statusTimeout = setTimeout(() => {
+            document.getElementById('status').textContent = '';
+            statusTimeout = null;
+        }, delay);
+    }
     
     // Verificar si ggwave_factory está disponible
     if (typeof ggwave_factory !== 'undefined') {
         // Inicializar ggwave
         ggwave_factory().then(function(obj) {
             ggwave = obj;
-            document.getElementById('status').textContent = 'Listo para convertir texto a audio';
-            console.log('ggwave inicializado correctamente');
+            document.getElementById('status').textContent = 'Ready to convert text to audio';
+            console.log('ggwave initialized successfully');
         }).catch(function(error) {
-            console.error('Error al inicializar ggwave:', error);
-            document.getElementById('status').textContent = 'Error al inicializar componentes de audio.';
+            console.error('Error initializing ggwave:', error);
+            document.getElementById('status').textContent = 'Error initializing audio components.';
         });
     } else {
-        console.error('La biblioteca ggwave_factory no está disponible');
-        document.getElementById('status').textContent = 'Error: No se pudo cargar la biblioteca de audio.';
+        console.error('ggwave_factory library is not available');
+        document.getElementById('status').textContent = 'Error: Could not load audio library.';
     }
     
     // Obtener referencia al botón
@@ -33,26 +48,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Verificar que el botón existe
     if (!translateBtn) {
-        console.error('No se encontró el botón de traducción');
+        console.error('Translation button not found');
         return;
     }
     
-    console.log('Botón de traducción encontrado, configurando evento click');
+    console.log('Translation button found, setting up click event');
     
     // Añadir evento click al botón
     translateBtn.addEventListener('click', () => {
-        console.log('Botón traducir pulsado');
+        console.log('Translate button clicked');
         
         const text = document.getElementById('inputText').value;
         
         if (!text) {
-            alert('Por favor, ingresa algún texto para traducir.');
+            alert('Please enter some text to translate.');
             return;
         }
         
         // Verificar si ggwave está inicializado
         if (!ggwave) {
-            console.error('ggwave no está inicializado');
+            console.error('ggwave is not initialized');
             useSimulationMode(text);
             return;
         }
@@ -68,8 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 instance = ggwave.init(parameters);
             }
             
-            console.log('Generando audio para:', text);
-            document.getElementById('status').textContent = 'Generando audio...';
+            console.log('Generating audio for:', text);
+            document.getElementById('status').textContent = 'Generating audio...';
             
             // Generar el audio con ggwave
             // Intentar con diferentes nombres de protocolo
@@ -103,20 +118,23 @@ document.addEventListener('DOMContentLoaded', () => {
             source.connect(context.destination);
             source.start(0);
             
-            console.log('Audio generado y reproducido');
-            document.getElementById('status').textContent = 'Audio generado correctamente';
+            console.log('Audio generated and played');
+            document.getElementById('status').textContent = 'Audio successfully generated';
+            
+            // Limpiar el mensaje después de 3 segundos
+            clearStatusAfterDelay();
             
         } catch (error) {
-            console.error('Error al generar audio con ggwave:', error);
-            console.error('Detalles del error:', error.message);
+            console.error('Error generating audio with ggwave:', error);
+            console.error('Error details:', error.message);
             useSimulationMode(text);
         }
     });
     
     // Función para usar el modo de simulación
     function useSimulationMode(text) {
-        console.log('Usando modo de simulación para:', text);
-        document.getElementById('status').textContent = 'Generando audio (modo simulación)...';
+        console.log('Using simulation mode for:', text);
+        document.getElementById('status').textContent = 'Generating audio (simulation mode)...';
         
         // Generar un patrón de sonido basado en el texto
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -153,9 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
             oscillator.stop(endTime);
         }
         
-        console.log('Simulación completada');
-        document.getElementById('status').textContent = 'Audio generado correctamente (simulación)';
+        console.log('Simulation completed');
+        document.getElementById('status').textContent = 'Audio successfully generated (simulation)';
+        
+        // Limpiar el mensaje después de 3 segundos
+        clearStatusAfterDelay();
     }
     
-    console.log('Script cargado completamente');
+    console.log('Script fully loaded');
 }); 
