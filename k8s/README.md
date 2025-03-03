@@ -13,7 +13,8 @@ Este directorio contiene los archivos necesarios para desplegar GibberSound en u
 - `frontend-deployment.yaml`: Manifiesto de Kubernetes para el deployment del frontend
 - `frontend-service.yaml`: Manifiesto de Kubernetes para el servicio del frontend
 - `ingress.yaml`: Manifiesto para configurar el Ingress con Traefik
-- `deploy.sh`: Script para facilitar la construcción y despliegue
+- `build-images.sh`: Script para construir y actualizar imágenes con versionado
+- `deploy.sh`: Script para el despliegue completo de la aplicación
 
 ## Requisitos previos
 
@@ -23,50 +24,66 @@ Este directorio contiene los archivos necesarios para desplegar GibberSound en u
 - Cuenta en DockerHub (usuario: fpinero)
 - Un dominio configurado para apuntar a la IP del nodo master de k3s
 
-## Flujo de trabajo para el despliegue
+## Flujo de trabajo para el desarrollo y despliegue
 
-### 1. Construcción de imágenes locales
+### Opción 1: Construir y actualizar imágenes (uso diario)
 
-Primero, construye las imágenes Docker localmente:
+Para el desarrollo continuo, cuando solo necesitas actualizar las imágenes con los últimos cambios:
+
+```bash
+chmod +x k8s/build-images.sh
+./k8s/build-images.sh
+```
+
+Este script realizará las siguientes acciones:
+
+1. Solicitará una versión para las imágenes (ej: 1.0.0)
+2. Guardará la versión en un archivo `VERSION` para referencia futura
+3. Construirá las imágenes con la versión especificada:
+   - `fpinero/gibbersound-backend:x.x.x`
+   - `fpinero/gibbersound-frontend:x.x.x`
+4. También etiquetará las imágenes como `latest` para compatibilidad
+5. Actualizará automáticamente los archivos de deployment para usar la versión específica
+6. Opcionalmente subirá las imágenes a DockerHub
+7. Opcionalmente aplicará los cambios en los deployments existentes en Kubernetes
+
+### Opción 2: Despliegue completo (primera instalación)
+
+Para un despliegue completo de la aplicación desde cero:
 
 ```bash
 chmod +x k8s/deploy.sh
 ./k8s/deploy.sh
 ```
 
-Este script construirá las imágenes localmente con los siguientes tags:
-- `fpinero/gibbersound-backend:latest`
-- `fpinero/gibbersound-frontend:latest`
+Este script realizará un despliegue completo:
 
-### 2. Subir imágenes a DockerHub (manual)
+1. Solicitará una versión para las imágenes
+2. Construirá las imágenes con la versión especificada
+3. Actualizará los archivos de deployment
+4. Opcionalmente subirá las imágenes a DockerHub
+5. Solicitará un dominio para configurar el Ingress
+6. Desplegará todos los componentes en Kubernetes:
+   - Namespace
+   - Backend (deployment y servicio)
+   - Frontend (deployment y servicio)
+   - Ingress
 
-Para subir las imágenes a DockerHub, sigue estos pasos manualmente:
+## Gestión de versiones
 
-```bash
-# Iniciar sesión en DockerHub (solo necesitas hacerlo una vez)
-docker login
+El sistema ahora utiliza un enfoque de versionado semántico para las imágenes Docker:
 
-# Subir las imágenes
-docker push fpinero/gibbersound-backend:latest
-docker push fpinero/gibbersound-frontend:latest
-```
+- Las versiones se almacenan en un archivo `VERSION` en la raíz del proyecto
+- Cada vez que ejecutas uno de los scripts, te sugerirá la versión actual como valor predeterminado
+- Puedes incrementar la versión según sea necesario (ej: 1.0.0 → 1.0.1 para correcciones, 1.0.0 → 1.1.0 para nuevas características)
+- Los archivos de deployment se actualizan automáticamente para usar la versión específica
+- Se mantiene la compatibilidad con `latest` para sistemas existentes
 
-> **Nota**: Si prefieres usar una versión específica en lugar de `latest`, puedes etiquetar las imágenes antes de subirlas:
-> ```bash
-> docker tag fpinero/gibbersound-backend:latest fpinero/gibbersound-backend:1.0.0
-> docker tag fpinero/gibbersound-frontend:latest fpinero/gibbersound-frontend:1.0.0
-> docker push fpinero/gibbersound-backend:1.0.0
-> docker push fpinero/gibbersound-frontend:1.0.0
-> ```
-> En ese caso, recuerda actualizar los archivos de deployment para usar la versión específica.
+## Despliegue manual en Kubernetes
 
-### 3. Desplegar en Kubernetes (k3s)
-
-Una vez que las imágenes estén disponibles en DockerHub, puedes desplegar la aplicación en k3s:
+Si prefieres desplegar manualmente después de construir las imágenes:
 
 ```bash
-# Si no has ejecutado el script deploy.sh o has respondido 'n' a la pregunta de despliegue
-
 # Crear el namespace
 kubectl apply -f k8s/namespace.yaml
 
@@ -80,7 +97,7 @@ kubectl apply -f k8s/frontend-service.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
-### 4. Configuración DNS
+## Configuración DNS
 
 Para que la aplicación sea accesible a través de tu dominio, necesitas configurar registros DNS:
 
@@ -91,7 +108,7 @@ Si usas CloudFlare:
 1. Activa el proxy (icono naranja) para obtener HTTPS automáticamente
 2. No es necesario configurar Let's Encrypt, ya que CloudFlare proporciona el certificado SSL
 
-### 5. Verificar el despliegue
+## Verificar el despliegue
 
 ```bash
 # Verificar que los pods están funcionando
@@ -104,6 +121,31 @@ kubectl get services -n gibbersound
 kubectl get ingress -n gibbersound
 ```
 
+## Actualización de imágenes
+
+Para actualizar las imágenes con una nueva versión:
+
+```bash
+# Usar el script de construcción de imágenes
+./k8s/build-images.sh
+
+# O manualmente:
+# 1. Construir nuevas imágenes con una versión específica
+docker build -t fpinero/gibbersound-backend:1.0.1 -f k8s/Dockerfile.backend .
+docker build -t fpinero/gibbersound-frontend:1.0.1 -f k8s/Dockerfile.frontend .
+
+# 2. Actualizar los archivos de deployment para usar la nueva versión
+# Editar backend-deployment.yaml y frontend-deployment.yaml
+
+# 3. Aplicar los cambios
+kubectl apply -f k8s/backend-deployment.yaml
+kubectl apply -f k8s/frontend-deployment.yaml
+
+# 4. Reiniciar los deployments para forzar la actualización
+kubectl rollout restart deployment -n gibbersound gibbersound-backend
+kubectl rollout restart deployment -n gibbersound gibbersound-frontend
+```
+
 ## Personalización
 
 Si necesitas personalizar la configuración, puedes modificar los siguientes archivos:
@@ -111,8 +153,7 @@ Si necesitas personalizar la configuración, puedes modificar los siguientes arc
 - Para cambiar la configuración de Nginx: `nginx.conf`
 - Para ajustar los recursos asignados a los pods: edita los campos `resources` en los archivos de deployment
 - Para cambiar el número de réplicas: edita el campo `replicas` en los archivos de deployment
-- Para usar una versión específica de las imágenes: edita el campo `image` en los archivos de deployment
-- Para cambiar el dominio: edita el archivo `ingress.yaml`
+- Para cambiar el dominio: edita el archivo `ingress.yaml` o usa el script `deploy.sh`
 
 ## Solución de problemas
 
