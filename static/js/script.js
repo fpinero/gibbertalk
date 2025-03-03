@@ -4,6 +4,7 @@ let ggwave = null;
 let parameters = null;
 let instance = null;
 let statusTimeout = null; // Variable para controlar el timeout del mensaje de estado
+let audioGenerationInProgress = false; // Variable para controlar si se está generando audio
 
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,8 +14,28 @@ document.addEventListener('DOMContentLoaded', () => {
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
     window.OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
     
+    // Función para deshabilitar el botón
+    function disableButton() {
+        const translateBtn = document.getElementById('translateBtn');
+        if (translateBtn) {
+            translateBtn.disabled = true;
+            translateBtn.setAttribute('disabled', 'disabled'); // Para mayor compatibilidad
+            translateBtn.classList.add('disabled'); // Clase adicional para estilos
+        }
+    }
+    
+    // Función para habilitar el botón
+    function enableButton() {
+        const translateBtn = document.getElementById('translateBtn');
+        if (translateBtn) {
+            translateBtn.disabled = false;
+            translateBtn.removeAttribute('disabled');
+            translateBtn.classList.remove('disabled');
+        }
+    }
+    
     // Función para limpiar el mensaje de estado después de un tiempo
-    function clearStatusAfterDelay(delay = 3000) {
+    function clearStatusAfterDelay(delay = 4000) { // Reducido a 4 segundos
         // Limpiar cualquier timeout existente
         if (statusTimeout) {
             clearTimeout(statusTimeout);
@@ -22,8 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Establecer un nuevo timeout
         statusTimeout = setTimeout(() => {
-            document.getElementById('status').textContent = '';
+            // En lugar de dejar el espacio vacío, volver a mostrar el mensaje de "Ready to convert text to audio"
+            document.getElementById('status').textContent = 'Ready to convert text to audio';
             statusTimeout = null;
+            audioGenerationInProgress = false; // Resetear el estado
+            
+            // Habilitar el botón Send
+            enableButton();
         }, delay);
     }
     
@@ -58,12 +84,27 @@ document.addEventListener('DOMContentLoaded', () => {
     translateBtn.addEventListener('click', () => {
         console.log('Translate button clicked');
         
+        // Evitar múltiples clics mientras se procesa
+        if (audioGenerationInProgress) {
+            console.log('Audio generation already in progress, ignoring click');
+            return;
+        }
+        
         const text = document.getElementById('inputText').value;
         
         if (!text) {
             alert('Please enter some text to translate.');
             return;
         }
+        
+        // Marcar que estamos generando audio
+        audioGenerationInProgress = true;
+        
+        // Deshabilitar el botón mientras se genera el audio
+        disableButton();
+        
+        // Mostrar mensaje de generación inmediatamente
+        document.getElementById('status').textContent = 'Generating audio...';
         
         // Verificar si ggwave está inicializado
         if (!ggwave) {
@@ -84,45 +125,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             console.log('Generating audio for:', text);
-            document.getElementById('status').textContent = 'Generating audio...';
             
-            // Generar el audio con ggwave
-            // Intentar con diferentes nombres de protocolo
-            let waveform;
-            try {
-                // Intentar con TxProtocolId (como en el ejemplo)
-                waveform = ggwave.encode(instance, text, ggwave.TxProtocolId.GGWAVE_TX_PROTOCOL_AUDIBLE_FAST, 10);
-            } catch (e) {
+            // Pequeño retraso para asegurar que el mensaje "Generating audio..." se muestre
+            setTimeout(() => {
+                // Generar el audio con ggwave
+                // Intentar con diferentes nombres de protocolo
+                let waveform;
                 try {
-                    // Intentar con ProtocolId (como en test.html)
-                    waveform = ggwave.encode(instance, text, ggwave.ProtocolId.GGWAVE_PROTOCOL_AUDIBLE_FAST, 10);
-                } catch (e2) {
-                    // Intentar con un valor numérico directo (1 = audible fast)
-                    waveform = ggwave.encode(instance, text, 1, 10);
+                    // Intentar con TxProtocolId (como en el ejemplo)
+                    waveform = ggwave.encode(instance, text, ggwave.TxProtocolId.GGWAVE_TX_PROTOCOL_AUDIBLE_FAST, 10);
+                } catch (e) {
+                    try {
+                        // Intentar con ProtocolId (como en test.html)
+                        waveform = ggwave.encode(instance, text, ggwave.ProtocolId.GGWAVE_PROTOCOL_AUDIBLE_FAST, 10);
+                    } catch (e2) {
+                        // Intentar con un valor numérico directo (1 = audible fast)
+                        waveform = ggwave.encode(instance, text, 1, 10);
+                    }
                 }
-            }
-            
-            // Función auxiliar para convertir arrays
-            function convertTypedArray(src, type) {
-                var buffer = new ArrayBuffer(src.byteLength);
-                var baseView = new src.constructor(buffer).set(src);
-                return new type(buffer);
-            }
-            
-            // Reproducir audio
-            var buf = convertTypedArray(waveform, Float32Array);
-            var buffer = context.createBuffer(1, buf.length, context.sampleRate);
-            buffer.getChannelData(0).set(buf);
-            var source = context.createBufferSource();
-            source.buffer = buffer;
-            source.connect(context.destination);
-            source.start(0);
-            
-            console.log('Audio generated and played');
-            document.getElementById('status').textContent = 'Audio successfully generated';
-            
-            // Limpiar el mensaje después de 3 segundos
-            clearStatusAfterDelay();
+                
+                // Función auxiliar para convertir arrays
+                function convertTypedArray(src, type) {
+                    var buffer = new ArrayBuffer(src.byteLength);
+                    var baseView = new src.constructor(buffer).set(src);
+                    return new type(buffer);
+                }
+                
+                // Reproducir audio
+                var buf = convertTypedArray(waveform, Float32Array);
+                var buffer = context.createBuffer(1, buf.length, context.sampleRate);
+                buffer.getChannelData(0).set(buf);
+                var source = context.createBufferSource();
+                source.buffer = buffer;
+                source.connect(context.destination);
+                source.start(0);
+                
+                console.log('Audio generated and played');
+                document.getElementById('status').textContent = 'Audio successfully generated';
+                
+                // Calcular un tiempo de espera basado en la longitud del texto
+                // pero con un mínimo de 4 segundos y un máximo de 8 segundos
+                const messageDelay = Math.min(Math.max(text.length * 0.05, 4000), 8000);
+                
+                // Limpiar el mensaje después del tiempo calculado
+                clearStatusAfterDelay(messageDelay);
+            }, 100); // Pequeño retraso para asegurar que el mensaje se muestre
             
         } catch (error) {
             console.error('Error generating audio with ggwave:', error);
@@ -135,6 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function useSimulationMode(text) {
         console.log('Using simulation mode for:', text);
         document.getElementById('status').textContent = 'Generating audio (simulation mode)...';
+        
+        // Deshabilitar el botón mientras se genera el audio
+        disableButton();
         
         // Generar un patrón de sonido basado en el texto
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -174,8 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Simulation completed');
         document.getElementById('status').textContent = 'Audio successfully generated (simulation)';
         
-        // Limpiar el mensaje después de 3 segundos
-        clearStatusAfterDelay();
+        // Calcular un tiempo de espera basado en la longitud del texto
+        const messageDelay = Math.min(Math.max(text.length * 0.05, 4000), 8000);
+        
+        // Limpiar el mensaje después del tiempo calculado
+        clearStatusAfterDelay(messageDelay);
     }
     
     console.log('Script fully loaded');

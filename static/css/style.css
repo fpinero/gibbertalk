@@ -9,6 +9,8 @@
     --shadow: 0 2px 10px rgba(0,0,0,0.1);
     --border-radius: 8px;
     --spacing: 20px;
+    --disabled-color: #cccccc;
+    --disabled-text: #888888;
 }
 
 * {
@@ -115,6 +117,27 @@ textarea:focus {
 
 .btn-send:active {
     transform: scale(0.98);
+}
+
+/* Estilos para el botón deshabilitado */
+.btn-send:disabled,
+.btn-send.disabled {
+    background-color: var(--disabled-color);
+    color: var(--disabled-text);
+    cursor: not-allowed;
+    transform: none;
+    opacity: 0.7;
+    box-shadow: none;
+}
+
+.btn-send:disabled:hover,
+.btn-send.disabled:hover {
+    background-color: var(--disabled-color);
+}
+
+.btn-send:disabled:active,
+.btn-send.disabled:active {
+    transform: none;
 }
 
 .material-icons {
