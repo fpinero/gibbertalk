@@ -71,6 +71,28 @@ update_deployment_files() {
     echo -e "${GREEN}Archivos de deployment actualizados correctamente.${NC}"
 }
 
+# Función para actualizar la versión en el archivo index.html
+update_version_in_html() {
+    echo -e "${YELLOW}Actualizando versión en el archivo index.html...${NC}"
+    
+    # Verificar que el archivo index.html existe
+    if [ ! -f "templates/index.html" ]; then
+        echo -e "${RED}Error: El archivo templates/index.html no existe.${NC}"
+        return
+    fi
+    
+    # Detectar el sistema operativo para usar la versión correcta de sed
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS usa una sintaxis diferente para sed
+        sed -i '' "s|Proof of Concept |Proof of Concept v${VERSION} |g" templates/index.html
+    else
+        # Linux y otros sistemas
+        sed -i "s|Proof of Concept |Proof of Concept v${VERSION} |g" templates/index.html
+    fi
+    
+    echo -e "${GREEN}Versión actualizada en index.html correctamente.${NC}"
+}
+
 echo -e "${YELLOW}Despliegue completo de GibberSound en Kubernetes${NC}"
 echo -e "${YELLOW}Este script realizará un despliegue completo de la aplicación.${NC}"
 echo -e "${YELLOW}Si solo deseas construir y actualizar imágenes, usa el script build-images.sh${NC}"
@@ -101,6 +123,9 @@ fi
 
 # Obtener la versión para las imágenes
 get_version
+
+# Actualizar la versión en el archivo index.html
+update_version_in_html
 
 echo -e "${YELLOW}Construyendo imágenes Docker para GibberSound versión ${VERSION}...${NC}"
 

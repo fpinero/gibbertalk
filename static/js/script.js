@@ -5,6 +5,8 @@ let parameters = null;
 let instance = null;
 let statusTimeout = null; // Variable para controlar el timeout del mensaje de estado
 let audioGenerationInProgress = false; // Variable para controlar si se está generando audio
+let analyser = null; // Analizador para la visualización del audio
+let visualizerAnimationFrame = null; // Para controlar la animación del visualizador
 
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,8 +36,87 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Función para inicializar el analizador de audio
+    function setupAnalyser() {
+        if (!context) {
+            context = new AudioContext({sampleRate: 48000});
+        }
+        
+        // Crear el analizador si no existe
+        if (!analyser) {
+            analyser = context.createAnalyser();
+            analyser.fftSize = 256; // Tamaño de la FFT (potencia de 2)
+            analyser.connect(context.destination);
+        }
+        
+        return analyser;
+    }
+    
+    // Función para iniciar la visualización del audio
+    function startVisualization(source) {
+        const analyser = setupAnalyser();
+        source.connect(analyser);
+        
+        const visualizerContainer = document.getElementById('audioVisualizer');
+        const canvas = document.getElementById('visualizerCanvas');
+        const canvasCtx = canvas.getContext('2d');
+        
+        // Mostrar el contenedor del visualizador
+        visualizerContainer.style.display = 'block';
+        
+        // Ajustar el tamaño del canvas
+        canvas.width = visualizerContainer.clientWidth;
+        canvas.height = visualizerContainer.clientHeight;
+        
+        // Obtener los datos del analizador
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        // Función para dibujar el espectro
+        function drawSpectrum() {
+            // Cancelar cualquier animación previa
+            if (visualizerAnimationFrame) {
+                cancelAnimationFrame(visualizerAnimationFrame);
+            }
+            
+            visualizerAnimationFrame = requestAnimationFrame(drawSpectrum);
+            
+            // Obtener los datos de frecuencia
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Limpiar el canvas
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Dibujar las barras del espectro
+            const barWidth = (canvas.width / bufferLength) * 2.5;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * canvas.height;
+                
+                // Dibujar la barra
+                canvasCtx.fillStyle = `var(--visualizer-color)`;
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                
+                x += barWidth + 1;
+            }
+        }
+        
+        // Iniciar la animación
+        drawSpectrum();
+        
+        // Devolver una función para detener la visualización
+        return function stopVisualization() {
+            if (visualizerAnimationFrame) {
+                cancelAnimationFrame(visualizerAnimationFrame);
+                visualizerAnimationFrame = null;
+            }
+            visualizerContainer.style.display = 'none';
+        };
+    }
+    
     // Función para limpiar el mensaje de estado después de un tiempo
-    function clearStatusAfterDelay(delay = 4000) { // Reducido a 4 segundos
+    function clearStatusAfterDelay(delay = 4000, stopVisualizationFn) { // Reducido a 4 segundos
         // Limpiar cualquier timeout existente
         if (statusTimeout) {
             clearTimeout(statusTimeout);
@@ -47,6 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('status').textContent = 'Ready to convert text to audio';
             statusTimeout = null;
             audioGenerationInProgress = false; // Resetear el estado
+            
+            // Detener la visualización si hay una función para hacerlo
+            if (typeof stopVisualizationFn === 'function') {
+                stopVisualizationFn();
+            }
             
             // Habilitar el botón Send
             enableButton();
@@ -157,8 +243,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 buffer.getChannelData(0).set(buf);
                 var source = context.createBufferSource();
                 source.buffer = buffer;
+                
+                // Iniciar la visualización del audio
+                const stopVisualization = startVisualization(source);
+                
+                // Conectar la fuente al destino
                 source.connect(context.destination);
                 source.start(0);
+                
+                // Detectar cuando termina la reproducción
+                source.onended = function() {
+                    console.log('Audio playback ended');
+                };
                 
                 console.log('Audio generated and played');
                 document.getElementById('status').textContent = 'Audio successfully generated';
@@ -168,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const messageDelay = Math.min(Math.max(text.length * 0.05, 4000), 8000);
                 
                 // Limpiar el mensaje después del tiempo calculado
-                clearStatusAfterDelay(messageDelay);
+                clearStatusAfterDelay(messageDelay, stopVisualization);
             }, 100); // Pequeño retraso para asegurar que el mensaje se muestre
             
         } catch (error) {
@@ -195,7 +291,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Crear un nodo de ganancia para controlar el volumen
         const gainNode = audioContext.createGain();
         gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.connect(audioContext.destination);
+        
+        // Configurar el analizador para el modo de simulación
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        gainNode.connect(analyser);
+        analyser.connect(audioContext.destination);
+        
+        // Iniciar la visualización
+        const stopVisualization = startVisualization({ connect: function() { return; } }); // Objeto dummy
         
         // Generar un sonido "tipo módem" simulando GibberLink
         for (let i = 0; i < text.length; i++) {
@@ -228,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageDelay = Math.min(Math.max(text.length * 0.05, 4000), 8000);
         
         // Limpiar el mensaje después del tiempo calculado
-        clearStatusAfterDelay(messageDelay);
+        clearStatusAfterDelay(messageDelay, stopVisualization);
     }
     
     console.log('Script fully loaded');
