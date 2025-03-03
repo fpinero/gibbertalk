@@ -7,6 +7,7 @@ let statusTimeout = null; // Variable para controlar el timeout del mensaje de e
 let audioGenerationInProgress = false; // Variable para controlar si se está generando audio
 let analyser = null; // Analizador para la visualización del audio
 let visualizerAnimationFrame = null; // Para controlar la animación del visualizador
+let currentAudioSource = null; // Para mantener referencia a la fuente de audio actual
 
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
@@ -91,12 +92,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const barWidth = (canvas.width / bufferLength) * 2.5;
             let x = 0;
             
+            // Crear un gradiente para las barras - usando valores hexadecimales directos
+            const gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
+            gradient.addColorStop(0, '#4a6fa5');  // Color base
+            gradient.addColorStop(0.5, '#64b5f6'); // Color medio brillante
+            gradient.addColorStop(1, '#2196f3');  // Color acento
+            
             for (let i = 0; i < bufferLength; i++) {
                 const barHeight = (dataArray[i] / 255) * canvas.height;
                 
-                // Dibujar la barra
-                canvasCtx.fillStyle = `var(--visualizer-color)`;
+                // Dibujar la barra con el gradiente
+                canvasCtx.fillStyle = gradient;
                 canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                
+                // Añadir un borde sutil a las barras
+                canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                canvasCtx.lineWidth = 1;
+                canvasCtx.strokeRect(x, canvas.height - barHeight, barWidth, barHeight);
                 
                 x += barWidth + 1;
             }
@@ -115,28 +127,19 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
     
-    // Función para limpiar el mensaje de estado después de un tiempo
-    function clearStatusAfterDelay(delay = 4000, stopVisualizationFn) { // Reducido a 4 segundos
-        // Limpiar cualquier timeout existente
-        if (statusTimeout) {
-            clearTimeout(statusTimeout);
-        }
+    // Función para restablecer la interfaz después de la reproducción de audio
+    function resetInterface() {
+        // Mostrar mensaje de listo para convertir
+        document.getElementById('status').textContent = 'Ready to convert text to audio';
         
-        // Establecer un nuevo timeout
-        statusTimeout = setTimeout(() => {
-            // En lugar de dejar el espacio vacío, volver a mostrar el mensaje de "Ready to convert text to audio"
-            document.getElementById('status').textContent = 'Ready to convert text to audio';
-            statusTimeout = null;
-            audioGenerationInProgress = false; // Resetear el estado
-            
-            // Detener la visualización si hay una función para hacerlo
-            if (typeof stopVisualizationFn === 'function') {
-                stopVisualizationFn();
-            }
-            
-            // Habilitar el botón Send
-            enableButton();
-        }, delay);
+        // Resetear el estado
+        audioGenerationInProgress = false;
+        
+        // Habilitar el botón Send
+        enableButton();
+        
+        // Limpiar la referencia a la fuente de audio actual
+        currentAudioSource = null;
     }
     
     // Verificar si ggwave_factory está disponible
@@ -244,27 +247,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 var source = context.createBufferSource();
                 source.buffer = buffer;
                 
+                // Guardar referencia a la fuente de audio actual
+                currentAudioSource = source;
+                
                 // Iniciar la visualización del audio
                 const stopVisualization = startVisualization(source);
                 
                 // Conectar la fuente al destino
                 source.connect(context.destination);
-                source.start(0);
+                
+                // Mostrar mensaje de audio generado
+                document.getElementById('status').textContent = 'Audio successfully generated';
                 
                 // Detectar cuando termina la reproducción
                 source.onended = function() {
                     console.log('Audio playback ended');
+                    
+                    // Detener la visualización
+                    stopVisualization();
+                    
+                    // Restablecer la interfaz
+                    resetInterface();
                 };
                 
+                // Iniciar la reproducción
+                source.start(0);
+                
                 console.log('Audio generated and played');
-                document.getElementById('status').textContent = 'Audio successfully generated';
                 
-                // Calcular un tiempo de espera basado en la longitud del texto
-                // pero con un mínimo de 4 segundos y un máximo de 8 segundos
-                const messageDelay = Math.min(Math.max(text.length * 0.05, 4000), 8000);
-                
-                // Limpiar el mensaje después del tiempo calculado
-                clearStatusAfterDelay(messageDelay, stopVisualization);
             }, 100); // Pequeño retraso para asegurar que el mensaje se muestre
             
         } catch (error) {
@@ -301,6 +311,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Iniciar la visualización
         const stopVisualization = startVisualization({ connect: function() { return; } }); // Objeto dummy
         
+        // Calcular el tiempo total de la simulación
+        const totalDuration = Math.min(text.length * 0.1, 3); // Máximo 3 segundos
+        
+        // Mostrar mensaje de audio generado
+        document.getElementById('status').textContent = 'Audio successfully generated (simulation)';
+        
         // Generar un sonido "tipo módem" simulando GibberLink
         for (let i = 0; i < text.length; i++) {
             const charCode = text.charCodeAt(i);
@@ -326,13 +342,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         console.log('Simulation completed');
-        document.getElementById('status').textContent = 'Audio successfully generated (simulation)';
         
-        // Calcular un tiempo de espera basado en la longitud del texto
-        const messageDelay = Math.min(Math.max(text.length * 0.05, 4000), 8000);
-        
-        // Limpiar el mensaje después del tiempo calculado
-        clearStatusAfterDelay(messageDelay, stopVisualization);
+        // Programar la restauración de la interfaz después de que termine la simulación
+        setTimeout(() => {
+            // Detener la visualización
+            stopVisualization();
+            
+            // Restablecer la interfaz
+            resetInterface();
+        }, (totalDuration * 1000) + 500); // Convertir a milisegundos y añadir un pequeño margen
     }
     
     console.log('Script fully loaded');
