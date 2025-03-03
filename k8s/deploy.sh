@@ -84,10 +84,16 @@ update_version_in_html() {
     # Detectar el sistema operativo para usar la versión correcta de sed
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS usa una sintaxis diferente para sed
-        sed -i '' "s|Proof of Concept |Proof of Concept v${VERSION} |g" templates/index.html
+        # Reemplazar cualquier patrón "Proof of Concept vX.X.X" por "Proof of Concept" primero
+        sed -i '' -E 's/Proof of Concept v[0-9]+\.[0-9]+\.[0-9]+/Proof of Concept/g' templates/index.html
+        # Luego añadir la nueva versión
+        sed -i '' "s/Proof of Concept/Proof of Concept v${VERSION}/g" templates/index.html
     else
         # Linux y otros sistemas
-        sed -i "s|Proof of Concept |Proof of Concept v${VERSION} |g" templates/index.html
+        # Reemplazar cualquier patrón "Proof of Concept vX.X.X" por "Proof of Concept" primero
+        sed -i -E 's/Proof of Concept v[0-9]+\.[0-9]+\.[0-9]+/Proof of Concept/g' templates/index.html
+        # Luego añadir la nueva versión
+        sed -i "s/Proof of Concept/Proof of Concept v${VERSION}/g" templates/index.html
     fi
     
     echo -e "${GREEN}Versión actualizada en index.html correctamente.${NC}"
