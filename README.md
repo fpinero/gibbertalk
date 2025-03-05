@@ -79,7 +79,7 @@ gibbertalk/
    python app.py
    ```
 
-5. Abre tu navegador y visita `http://localhost:5000`
+5. Abre tu navegador y visita `http://localhost:5001`
 
 ## Uso
 
@@ -109,6 +109,34 @@ Para cualquier consulta o comentario sobre la aplicación, puedes contactarnos e
 ## Licencia
 
 Este proyecto está licenciado bajo la Licencia MIT - ver el archivo LICENSE para más detalles.
+
+## Configuración de DeepSeek API en Kubernetes
+
+Para utilizar la funcionalidad de DeepSeek API en el entorno de Kubernetes, sigue estos pasos:
+
+1. **Genera el secreto con tu API KEY**:
+   ```bash
+   # Codifica tu API KEY en base64
+   echo -n "tu-api-key-de-deepseek" | base64
+   
+   # Crea un archivo de secreto a partir de la plantilla
+   cp k8s/deepseek-secret.template.yaml k8s/deepseek-secret.yaml
+   
+   # Edita el archivo y reemplaza BASE64_ENCODED_API_KEY_HERE con tu valor codificado
+   nano k8s/deepseek-secret.yaml
+   ```
+
+2. **Aplica el secreto en Kubernetes**:
+   ```bash
+   kubectl apply -f k8s/deepseek-secret.yaml
+   ```
+
+3. **Actualiza el despliegue**:
+   ```bash
+   kubectl apply -f k8s/backend-deployment.yaml
+   ```
+
+⚠️ **IMPORTANTE**: El archivo `k8s/deepseek-secret.yaml` está incluido en `.gitignore` para evitar subir información sensible al repositorio. Nunca subas este archivo con tu API KEY real a Git.
 
 ---
 

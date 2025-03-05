@@ -20,10 +20,10 @@ spec:
     spec:
       containers:
       - name: gibbersound-backend
-        image: fpinero/gibbersound-backend:0.1.3
+        image: fpinero/gibbersound-backend:0.2.1
         imagePullPolicy: Always
         ports:
-        - containerPort: 5000
+        - containerPort: 5001
         resources:
           limits:
             cpu: "500m"
@@ -34,16 +34,21 @@ spec:
         env:
         - name: FLASK_ENV
           value: "production"
+        - name: DEEPSEEK_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: deepseek-api-credentials
+              key: DEEPSEEK_API_KEY
         livenessProbe:
           httpGet:
             path: /api/health
-            port: 5000
+            port: 5001
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /api/health
-            port: 5000
+            port: 5001
           initialDelaySeconds: 5
           periodSeconds: 5
       nodeSelector:

@@ -1,7 +1,22 @@
-from flask import Flask, render_template, jsonify, send_from_directory
+from flask import Flask, render_template, jsonify, send_from_directory, request
 import os
+import json
+import sys
+import httpx
 
 app = Flask(__name__)
+
+# Configuración de la API de DeepSeek
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
+if not DEEPSEEK_API_KEY:
+    print("Error: La variable de entorno DEEPSEEK_API_KEY no está configurada.")
+    print("Por favor, configúrela con: export DEEPSEEK_API_KEY='tu-api-key'")
+    # En producción, podrías querer que la aplicación continúe funcionando sin la API
+    # En desarrollo, es mejor fallar rápido para detectar problemas
+    if not os.environ.get('FLASK_ENV') == 'production':
+        sys.exit(1)
+
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 
 @app.route('/')
 def index():
@@ -10,6 +25,78 @@ def index():
 @app.route('/api/health')
 def health_check():
     return jsonify({"status": "healthy"})
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    try:
+        data = request.json
+        user_message = data.get('message', '')
+        
+        if not user_message:
+            return jsonify({"error": "No message provided"}), 400
+        
+        # Verificar que tenemos la API key
+        if not DEEPSEEK_API_KEY:
+            return jsonify({"error": "DeepSeek API key not configured"}), 500
+        
+        try:
+            print(f"Enviando mensaje a DeepSeek: {user_message}")
+            
+            # Preparar los datos para la solicitud
+            payload = {
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": "Eres un asistente útil y amigable. Proporciona siempre respuestas breves y concisas, limitándote a la información esencial. Evita explicaciones largas o detalles innecesarios."},
+                    {"role": "user", "content": user_message}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 250
+            }
+            
+            # Configurar los encabezados
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+            }
+            
+            # Hacer la solicitud a la API de DeepSeek
+            with httpx.Client(timeout=30.0) as client:
+                response = client.post(
+                    DEEPSEEK_API_URL,
+                    json=payload,
+                    headers=headers
+                )
+                
+                # Verificar si la solicitud fue exitosa
+                response.raise_for_status()
+                
+                # Parsear la respuesta
+                response_data = response.json()
+                
+                # Extraer la respuesta
+                ai_response = response_data["choices"][0]["message"]["content"]
+                print(f"Respuesta recibida de DeepSeek: {ai_response[:100]}...")  # Mostrar los primeros 100 caracteres
+                return jsonify({"response": ai_response})
+            
+        except httpx.HTTPStatusError as e:
+            print(f"Error HTTP en la llamada a la API de DeepSeek: {e}")
+            print(f"Respuesta: {e.response.text}")
+            return jsonify({"error": f"Error calling DeepSeek API: {str(e)}"}), 500
+        except httpx.RequestError as e:
+            print(f"Error de conexión a la API de DeepSeek: {e}")
+            return jsonify({"error": f"Connection error to DeepSeek API: {str(e)}"}), 500
+        except Exception as e:
+            print(f"Error en la llamada a la API de DeepSeek: {e}")
+            print(f"Tipo de error: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({"error": f"Error calling DeepSeek API: {str(e)}"}), 500
+    
+    except Exception as e:
+        print(f"Error general en /api/chat: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 # Ruta explícita para servir archivos estáticos si es necesario
 @app.route('/static/<path:filename>')
@@ -22,4 +109,6 @@ def serve_manifest():
     return send_from_directory('static/favicon', 'site.webmanifest')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000) 
+    # Usar puerto 5001 para evitar conflictos con el Centro de Control de macOS
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=True) 

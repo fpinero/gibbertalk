@@ -24,7 +24,7 @@ RUN ls -la /app && \
     if [ -f /app/app.py ]; then echo "app.py encontrado"; else echo "app.py NO encontrado" && exit 1; fi
 
 # Exponer el puerto que usa Flask
-EXPOSE 5000
+EXPOSE 5001
 
 # Comando para iniciar la aplicación
 CMD ["python", "app.py"] 

@@ -8,6 +8,7 @@ let audioGenerationInProgress = false; // Variable para controlar si se está ge
 let analyser = null; // Analizador para la visualización del audio
 let visualizerAnimationFrame = null; // Para controlar la animación del visualizador
 let currentAudioSource = null; // Para mantener referencia a la fuente de audio actual
+let aiResponseInProgress = false; // Variable para controlar si se está procesando una respuesta de IA
 
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
@@ -135,90 +136,32 @@ document.addEventListener('DOMContentLoaded', () => {
         // Resetear el estado
         audioGenerationInProgress = false;
         
-        // Habilitar el botón Send
-        enableButton();
+        // Habilitar el botón Send solo si no hay una respuesta de IA en progreso
+        if (!aiResponseInProgress) {
+            enableButton();
+        }
         
         // Limpiar la referencia a la fuente de audio actual
         currentAudioSource = null;
     }
-    
-    // Verificar si ggwave_factory está disponible
-    if (typeof ggwave_factory !== 'undefined') {
-        // Inicializar ggwave
-        ggwave_factory().then(function(obj) {
-            ggwave = obj;
-            document.getElementById('status').textContent = 'Ready to convert text to audio';
-            console.log('ggwave initialized successfully');
-        }).catch(function(error) {
-            console.error('Error initializing ggwave:', error);
-            document.getElementById('status').textContent = 'Error initializing audio components.';
-        });
-    } else {
-        console.error('ggwave_factory library is not available');
-        document.getElementById('status').textContent = 'Error: Could not load audio library.';
-    }
-    
-    // Obtener referencia al botón
-    const translateBtn = document.getElementById('translateBtn');
-    
-    // Verificar que el botón existe
-    if (!translateBtn) {
-        console.error('Translation button not found');
-        return;
-    }
-    
-    console.log('Translation button found, setting up click event');
-    
-    // Añadir evento click al botón
-    translateBtn.addEventListener('click', () => {
-        console.log('Translate button clicked');
-        
-        // Evitar múltiples clics mientras se procesa
-        if (audioGenerationInProgress) {
-            console.log('Audio generation already in progress, ignoring click');
-            return;
-        }
-        
-        const text = document.getElementById('inputText').value;
-        
-        if (!text) {
-            alert('Please enter some text to translate.');
-            return;
-        }
-        
-        // Marcar que estamos generando audio
-        audioGenerationInProgress = true;
-        
-        // Deshabilitar el botón mientras se genera el audio
-        disableButton();
-        
-        // Mostrar mensaje de generación inmediatamente
-        document.getElementById('status').textContent = 'Generating audio...';
-        
-        // Verificar si ggwave está inicializado
-        if (!ggwave) {
-            console.error('ggwave is not initialized');
-            useSimulationMode(text);
-            return;
-        }
-        
-        try {
-            // Inicializar el contexto de audio si no existe
-            if (!context) {
-                context = new AudioContext({sampleRate: 48000});
+
+    // Función para generar audio a partir de texto usando ggwave
+    function generateAudio(text, isAiResponse = false) {
+        return new Promise((resolve, reject) => {
+            try {
+                // Inicializar el contexto de audio si no existe
+                if (!context) {
+                    context = new AudioContext({sampleRate: 48000});
+                    
+                    parameters = ggwave.getDefaultParameters();
+                    parameters.sampleRateInp = context.sampleRate;
+                    parameters.sampleRateOut = context.sampleRate;
+                    instance = ggwave.init(parameters);
+                }
                 
-                parameters = ggwave.getDefaultParameters();
-                parameters.sampleRateInp = context.sampleRate;
-                parameters.sampleRateOut = context.sampleRate;
-                instance = ggwave.init(parameters);
-            }
-            
-            console.log('Generating audio for:', text);
-            
-            // Pequeño retraso para asegurar que el mensaje "Generating audio..." se muestre
-            setTimeout(() => {
+                console.log(`Generating audio for ${isAiResponse ? 'AI response' : 'user message'}:`, text);
+                
                 // Generar el audio con ggwave
-                // Intentar con diferentes nombres de protocolo
                 let waveform;
                 try {
                     // Intentar con TxProtocolId (como en el ejemplo)
@@ -240,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return new type(buffer);
                 }
                 
-                // Reproducir audio
+                // Crear buffer de audio
                 var buf = convertTypedArray(waveform, Float32Array);
                 var buffer = context.createBuffer(1, buf.length, context.sampleRate);
                 buffer.getChannelData(0).set(buf);
@@ -257,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 source.connect(context.destination);
                 
                 // Mostrar mensaje de audio generado
-                document.getElementById('status').textContent = 'Audio successfully generated';
+                document.getElementById('status').textContent = `Audio successfully generated ${isAiResponse ? 'for AI response' : ''}`;
                 
                 // Detectar cuando termina la reproducción
                 source.onended = function() {
@@ -266,8 +209,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Detener la visualización
                     stopVisualization();
                     
-                    // Restablecer la interfaz
-                    resetInterface();
+                    // Resolver la promesa
+                    resolve();
+                    
+                    // Si no es una respuesta de IA, restablecer la interfaz
+                    if (!isAiResponse) {
+                        resetInterface();
+                    }
                 };
                 
                 // Iniciar la reproducción
@@ -275,12 +223,147 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 console.log('Audio generated and played');
                 
-            }, 100); // Pequeño retraso para asegurar que el mensaje se muestre
+            } catch (error) {
+                console.error('Error generating audio with ggwave:', error);
+                console.error('Error details:', error.message);
+                reject(error);
+            }
+        });
+    }
+    
+    // Función para obtener respuesta de la IA
+    async function getAIResponse(userMessage) {
+        aiResponseInProgress = true; // Asegurarse de que se establezca al inicio
+        disableButton(); // Mantener el botón deshabilitado
+        
+        try {
+            document.getElementById('status').textContent = 'Requesting AI response...';
+            
+            // Mostrar el contenedor de respuesta
+            const responseContainer = document.getElementById('aiResponseContainer');
+            responseContainer.style.display = 'block';
+            
+            // Limpiar respuesta anterior
+            const responseTextarea = document.getElementById('aiResponseText');
+            responseTextarea.value = 'Waiting for AI response...';
+            
+            // Realizar la solicitud a la API
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: userMessage }),
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Mostrar la respuesta en el textarea
+                responseTextarea.value = data.response;
+                
+                // Actualizar el estado
+                document.getElementById('status').textContent = 'AI response received, generating audio...';
+                
+                // Generar audio para la respuesta de la IA
+                await generateAudio(data.response, true);
+                
+                // Restablecer la interfaz después de reproducir el audio de la respuesta
+                aiResponseInProgress = false; // Marcar que ya no hay respuesta en progreso
+                resetInterface();
+                
+            } else {
+                // Mostrar el error
+                responseTextarea.value = `Error: ${data.error || 'Unknown error'}`;
+                document.getElementById('status').textContent = 'Error getting AI response';
+                aiResponseInProgress = false; // Marcar que ya no hay respuesta en progreso
+                resetInterface();
+            }
+        } catch (error) {
+            console.error('Error getting AI response:', error);
+            document.getElementById('aiResponseText').value = `Error: ${error.message}`;
+            document.getElementById('status').textContent = 'Error getting AI response';
+            aiResponseInProgress = false; // Marcar que ya no hay respuesta en progreso
+            resetInterface();
+        }
+    }
+    
+    // Verificar si ggwave_factory está disponible
+    if (typeof ggwave_factory !== 'undefined') {
+        // Inicializar ggwave
+        ggwave_factory().then(function(obj) {
+            ggwave = obj;
+            document.getElementById('status').textContent = 'Ready to convert text to audio';
+            console.log('ggwave initialized successfully');
+            
+            // Inicializar el contenedor de respuesta de la IA
+            document.getElementById('aiResponseText').value = '';
+        }).catch(function(error) {
+            console.error('Error initializing ggwave:', error);
+            document.getElementById('status').textContent = 'Error initializing audio components.';
+        });
+    } else {
+        console.error('ggwave_factory library is not available');
+        document.getElementById('status').textContent = 'Error: Could not load audio library.';
+    }
+    
+    // Obtener referencia al botón
+    const translateBtn = document.getElementById('translateBtn');
+    
+    // Verificar que el botón existe
+    if (!translateBtn) {
+        console.error('Translation button not found');
+        return;
+    }
+    
+    console.log('Translation button found, setting up click event');
+    
+    // Añadir evento click al botón
+    translateBtn.addEventListener('click', async () => {
+        console.log('Translate button clicked');
+        
+        // Evitar múltiples clics mientras se procesa
+        if (audioGenerationInProgress || aiResponseInProgress) {
+            console.log('Processing already in progress, ignoring click');
+            return;
+        }
+        
+        const text = document.getElementById('inputText').value;
+        
+        if (!text) {
+            alert('Please enter some text to translate.');
+            return;
+        }
+        
+        // Marcar que estamos generando audio
+        audioGenerationInProgress = true;
+        aiResponseInProgress = true;
+        
+        // Deshabilitar el botón mientras se genera el audio
+        disableButton();
+        
+        // Mostrar mensaje de generación inmediatamente
+        document.getElementById('status').textContent = 'Generating audio...';
+        
+        // Verificar si ggwave está inicializado
+        if (!ggwave) {
+            console.error('ggwave is not initialized');
+            useSimulationMode(text);
+            return;
+        }
+        
+        try {
+            // Generar audio para el mensaje del usuario
+            await generateAudio(text);
+            
+            // Obtener respuesta de la IA
+            await getAIResponse(text);
             
         } catch (error) {
-            console.error('Error generating audio with ggwave:', error);
-            console.error('Error details:', error.message);
-            useSimulationMode(text);
+            console.error('Error in processing:', error);
+            document.getElementById('status').textContent = 'Error processing request';
+            resetInterface();
+            aiResponseInProgress = false;
         }
     });
     
@@ -350,6 +433,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Restablecer la interfaz
             resetInterface();
+            
+            // Mostrar el contenedor de respuesta
+            const responseContainer = document.getElementById('aiResponseContainer');
+            responseContainer.style.display = 'block';
+            
+            // Simular respuesta de IA
+            document.getElementById('aiResponseText').value = "This is a simulated AI response since ggwave is not available. In a real environment, this would be a response from the DeepSeek API.";
+            
+            // Marcar que ya no estamos procesando una respuesta de IA
+            aiResponseInProgress = false;
+            
         }, (totalDuration * 1000) + 500); // Convertir a milisegundos y añadir un pequeño margen
     }
     

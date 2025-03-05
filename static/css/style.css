@@ -90,7 +90,7 @@ label {
 
 textarea {
     width: 100%;
-    height: 150px;
+    height: 100px;
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: var(--border-radius);
@@ -248,4 +248,54 @@ footer {
 #visualizerCanvas {
     width: 100%;
     height: 100%;
+}
+
+/* Estilos para el contenedor de respuesta de la IA */
+.response-container {
+    margin-top: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background-color: rgba(74, 111, 165, 0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.response-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.response-header .material-icons {
+    margin-right: 10px;
+}
+
+.response-header h3 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.response-content {
+    padding: 10px;
+}
+
+#aiResponseText {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: white;
+    resize: vertical;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+#aiResponseText:read-only {
+    background-color: #f9f9f9;
+    cursor: default;
 }
