@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const responseContainer = document.getElementById('aiResponseContainer');
             responseContainer.style.display = 'block';
             
-            // Limpiar respuesta anterior
+            // Limpiar respuesta anterior y mostrar mensaje de espera
             const responseTextarea = document.getElementById('aiResponseText');
             responseTextarea.value = 'Waiting for AI response...';
             
@@ -259,14 +259,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             if (response.ok) {
-                // Mostrar la respuesta en el textarea
-                responseTextarea.value = data.response;
-                
                 // Actualizar el estado
                 document.getElementById('status').textContent = 'AI response received, generating audio...';
                 
+                // Mantener el mensaje de espera mientras se genera el audio
+                responseTextarea.value = 'Decoding AI response...';
+                
                 // Generar audio para la respuesta de la IA
                 await generateAudio(data.response, true);
+                
+                // Mostrar la respuesta en el textarea DESPUÉS de que el audio haya terminado
+                responseTextarea.value = data.response;
                 
                 // Restablecer la interfaz después de reproducir el audio de la respuesta
                 aiResponseInProgress = false; // Marcar que ya no hay respuesta en progreso
@@ -375,6 +378,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Deshabilitar el botón mientras se genera el audio
         disableButton();
         
+        // Mostrar el contenedor de respuesta con mensaje de espera
+        const responseContainer = document.getElementById('aiResponseContainer');
+        responseContainer.style.display = 'block';
+        document.getElementById('aiResponseText').value = 'Decoding AI response...';
+        
         // Generar un patrón de sonido basado en el texto
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         
@@ -434,11 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Restablecer la interfaz
             resetInterface();
             
-            // Mostrar el contenedor de respuesta
-            const responseContainer = document.getElementById('aiResponseContainer');
-            responseContainer.style.display = 'block';
-            
-            // Simular respuesta de IA
+            // Simular respuesta de IA - mostrar después de que el audio haya terminado
             document.getElementById('aiResponseText').value = "This is a simulated AI response since ggwave is not available. In a real environment, this would be a response from the DeepSeek API.";
             
             // Marcar que ya no estamos procesando una respuesta de IA
