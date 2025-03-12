@@ -14,6 +14,9 @@ let aiResponseInProgress = false; // Variable para controlar si se está procesa
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded - Initializing ggwave');
     
+    // Inicializar el tema
+    initTheme();
+    
     // Inicializar ggwave
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
     window.OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -36,6 +39,46 @@ document.addEventListener('DOMContentLoaded', () => {
             translateBtn.removeAttribute('disabled');
             translateBtn.classList.remove('disabled');
         }
+    }
+    
+    // Función para inicializar el tema
+    function initTheme() {
+        const themeToggle = document.getElementById('themeToggle');
+        if (!themeToggle) return;
+        
+        // Verificar si hay un tema guardado en localStorage
+        const savedTheme = localStorage.getItem('theme');
+        
+        // Si hay un tema guardado, aplicarlo
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.checked = true;
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            themeToggle.checked = false;
+        }
+        
+        // Añadir evento para cambiar el tema
+        themeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                console.log('Tema oscuro activado');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                console.log('Tema claro activado');
+            }
+            
+            // Actualizar el visualizador si está activo
+            if (visualizerAnimationFrame) {
+                // Cancelar la animación actual y reiniciarla para aplicar los nuevos colores
+                cancelAnimationFrame(visualizerAnimationFrame);
+                if (currentAudioSource) {
+                    startVisualization(currentAudioSource);
+                }
+            }
+        });
     }
     
     // Función para inicializar el analizador de audio
@@ -93,11 +136,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const barWidth = (canvas.width / bufferLength) * 2.5;
             let x = 0;
             
-            // Crear un gradiente para las barras - usando valores hexadecimales directos
+            // Obtener los colores del tema actual
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            
+            // Crear un gradiente para las barras - usando variables CSS
             const gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
-            gradient.addColorStop(0, '#4a6fa5');  // Color base
-            gradient.addColorStop(0.5, '#64b5f6'); // Color medio brillante
-            gradient.addColorStop(1, '#2196f3');  // Color acento
+            
+            // Usar colores basados en el tema actual
+            const baseColor = getComputedStyle(document.documentElement).getPropertyValue('--visualizer-color').trim();
+            const brightColor = getComputedStyle(document.documentElement).getPropertyValue('--visualizer-color-bright').trim();
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--visualizer-color-accent').trim();
+            
+            gradient.addColorStop(0, baseColor);
+            gradient.addColorStop(0.5, brightColor);
+            gradient.addColorStop(1, accentColor);
             
             for (let i = 0; i < bufferLength; i++) {
                 const barHeight = (dataArray[i] / 255) * canvas.height;
@@ -107,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
                 
                 // Añadir un borde sutil a las barras
-                canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                canvasCtx.strokeStyle = isDarkTheme ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.5)';
                 canvasCtx.lineWidth = 1;
                 canvasCtx.strokeRect(x, canvas.height - barHeight, barWidth, barHeight);
                 
