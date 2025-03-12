@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Meta tags para CORS -->
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>GibberSound Translator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Favicons - Actualizado para la nueva ubicación -->
@@ -17,6 +20,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <!-- Iconos de Material Design -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Script para detectar la URL base -->
+    <script type="text/javascript">
+        // Establecer la URL base para las solicitudes AJAX
+        window.baseUrl = window.location.origin;
+        console.log('Base URL for API requests:', window.baseUrl);
+    </script>
 </head>
 <body>
     <div class="container">
@@ -64,7 +73,7 @@
         </main>
         
         <footer>
-            <p>&copy; 2025 GibberSound - Proof of Concept v0.2.2 | <a href="mailto:gibbersoundapp@gmail.com" class="contact-link">Contact</a></p>
+            <p>&copy; 2025 GibberSound - Proof of Concept v0.2.3 | <a href="mailto:gibbersoundapp@gmail.com" class="contact-link">Contact</a></p>
         </footer>
     </div>
     

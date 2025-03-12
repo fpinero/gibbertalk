@@ -3,8 +3,18 @@ import os
 import json
 import sys
 import httpx
+from flask_cors import CORS  # Importar Flask-CORS
 
 app = Flask(__name__)
+
+# Configurar CORS para permitir solicitudes desde los dominios especificados
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["https://gibbersound.com", "https://www.gibbersound.com", "http://localhost:5001"],
+        "methods": ["GET", "POST"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Configuración de la API de DeepSeek
 DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
@@ -29,6 +39,11 @@ def health_check():
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:
+        # Registrar información de la solicitud para depuración
+        print(f"Solicitud recibida desde: {request.headers.get('Origin', 'Origen desconocido')}")
+        print(f"Método: {request.method}")
+        print(f"Encabezados: {dict(request.headers)}")
+        
         data = request.json
         user_message = data.get('message', '')
         
@@ -61,6 +76,7 @@ def chat():
             
             # Hacer la solicitud a la API de DeepSeek
             with httpx.Client(timeout=30.0) as client:
+                print("Enviando solicitud a la API de DeepSeek...")
                 response = client.post(
                     DEEPSEEK_API_URL,
                     json=payload,
@@ -69,6 +85,7 @@ def chat():
                 
                 # Verificar si la solicitud fue exitosa
                 response.raise_for_status()
+                print(f"Respuesta de DeepSeek recibida con código: {response.status_code}")
                 
                 # Parsear la respuesta
                 response_data = response.json()
@@ -76,7 +93,10 @@ def chat():
                 # Extraer la respuesta
                 ai_response = response_data["choices"][0]["message"]["content"]
                 print(f"Respuesta recibida de DeepSeek: {ai_response[:100]}...")  # Mostrar los primeros 100 caracteres
-                return jsonify({"response": ai_response})
+                
+                # Preparar la respuesta con encabezados CORS explícitos
+                resp = jsonify({"response": ai_response})
+                return resp
             
         except httpx.HTTPStatusError as e:
             print(f"Error HTTP en la llamada a la API de DeepSeek: {e}")
@@ -101,12 +121,44 @@ def chat():
 # Ruta explícita para servir archivos estáticos si es necesario
 @app.route('/static/<path:filename>')
 def serve_static(filename):
-    return send_from_directory('static', filename)
+    response = send_from_directory('static', filename)
+    return response
 
 # Ruta para servir el site.webmanifest
 @app.route('/site.webmanifest')
 def serve_manifest():
-    return send_from_directory('static/favicon', 'site.webmanifest')
+    response = send_from_directory('static/favicon', 'site.webmanifest')
+    return response
+
+# Añadir encabezados CORS a todas las respuestas
+@app.after_request
+def add_cors_headers(response):
+    # Permitir solicitudes desde los dominios especificados
+    allowed_origins = ["https://gibbersound.com", "https://www.gibbersound.com", "http://localhost:5001"]
+    origin = request.headers.get('Origin')
+    
+    if origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+    
+    # Permitir credenciales
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    
+    # Permitir métodos
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    
+    # Permitir encabezados
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    
+    # Permitir que el navegador almacene en caché los resultados de la verificación previa
+    response.headers.add('Access-Control-Max-Age', '3600')
+    
+    return response
+
+# Manejar solicitudes OPTIONS para preflight CORS
+@app.route('/api/chat', methods=['OPTIONS'])
+def handle_options():
+    response = jsonify({'status': 'ok'})
+    return response
 
 if __name__ == '__main__':
     # Usar puerto 5001 para evitar conflictos con el Centro de Control de macOS

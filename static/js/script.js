@@ -238,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             document.getElementById('status').textContent = 'Requesting AI response...';
+            console.log('Sending request to DeepSeek API...');
             
             // Mostrar el contenedor de respuesta
             const responseContainer = document.getElementById('aiResponseContainer');
@@ -247,18 +248,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const responseTextarea = document.getElementById('aiResponseText');
             responseTextarea.value = 'Waiting for AI response...';
             
+            // Obtener la URL actual para el registro
+            const currentUrl = window.location.href;
+            console.log(`Current URL: ${currentUrl}`);
+            
+            // Usar la URL base para la solicitud API
+            const apiUrl = (window.baseUrl || window.location.origin) + '/api/chat';
+            console.log(`API URL: ${apiUrl}`);
+            
             // Realizar la solicitud a la API
-            const response = await fetch('/api/chat', {
+            console.log('Fetching from API endpoint...');
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Origin': window.location.origin
                 },
                 body: JSON.stringify({ message: userMessage }),
+                credentials: 'same-origin'
             });
             
+            console.log('Response status:', response.status);
+            console.log('Response headers:', [...response.headers.entries()]);
+            
             const data = await response.json();
+            console.log('Response data received:', data ? 'Data received successfully' : 'No data received');
             
             if (response.ok) {
+                console.log('API response successful');
                 // Actualizar el estado
                 document.getElementById('status').textContent = 'AI response received, generating audio...';
                 
@@ -266,16 +283,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 responseTextarea.value = 'Decoding AI response...';
                 
                 // Generar audio para la respuesta de la IA
+                console.log('Generating audio for AI response...');
                 await generateAudio(data.response, true);
+                console.log('Audio generation for AI response completed');
                 
                 // Mostrar la respuesta en el textarea DESPUÉS de que el audio haya terminado
                 responseTextarea.value = data.response;
+                console.log('AI response displayed in textarea');
                 
                 // Restablecer la interfaz después de reproducir el audio de la respuesta
                 aiResponseInProgress = false; // Marcar que ya no hay respuesta en progreso
                 resetInterface();
                 
             } else {
+                console.error('API response error:', data.error || 'Unknown error');
                 // Mostrar el error
                 responseTextarea.value = `Error: ${data.error || 'Unknown error'}`;
                 document.getElementById('status').textContent = 'Error getting AI response';
@@ -284,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error getting AI response:', error);
+            console.error('Error details:', error.message, error.stack);
             document.getElementById('aiResponseText').value = `Error: ${error.message}`;
             document.getElementById('status').textContent = 'Error getting AI response';
             aiResponseInProgress = false; // Marcar que ya no hay respuesta en progreso
