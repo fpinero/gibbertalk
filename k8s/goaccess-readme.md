@@ -40,8 +40,12 @@ El script presenta un menú con las siguientes opciones:
 2. **Generar informe HTML con timestamp**: Esta opción genera dos informes HTML:
    - Un informe local con timestamp que se descarga a tu máquina
    - Un informe fijo que se guarda en el servidor y es accesible vía web
+   
+   Además, te dará la opción de abrir el informe local, el informe web, ambos o ninguno.
 
-3. **Salir**: Cierra el script.
+3. **Abrir último informe web**: Esta opción abre directamente el último informe web generado sin necesidad de generar uno nuevo.
+
+4. **Salir**: Cierra el script.
 
 ## Modo interactivo
 
@@ -71,6 +75,8 @@ https://gibbersound.com/stats/report.html
 ```
 
 Este informe se sobrescribe cada vez que ejecutas la opción 2 del script, por lo que siempre muestra la información más reciente.
+
+El script te ofrece la opción de abrir este informe directamente en tu navegador.
 
 ## Características de los informes
 
@@ -124,7 +130,15 @@ Comprueba que:
 # Ejecutar el script
 ./k8s/goaccess-report.sh
 # Seleccionar la opción 2 para generar informes HTML
-# Visitar https://gibbersound.com/stats/report.html en tu navegador
+# Seleccionar la opción 2 o 3 para abrir el informe web
+```
+
+### Acceso rápido al último informe
+
+```bash
+# Ejecutar el script
+./k8s/goaccess-report.sh
+# Seleccionar la opción 3 para abrir directamente el último informe web
 ```
 
 ### Investigación de errores en tiempo real
