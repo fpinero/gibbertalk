@@ -172,3 +172,6 @@ cython_debug/
 
 # Secretos de Kubernetes
 k8s/deepseek-secret.yaml
+
+# Archivos de informes de GoAccess
+report_*.html
