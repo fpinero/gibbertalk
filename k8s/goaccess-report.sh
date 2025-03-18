@@ -43,18 +43,32 @@ generate_report() {
   # Crear timestamp
   TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
   REPORT_NAME="report_${TIMESTAMP}.html"
+  FIXED_REPORT_NAME="stats/report.html"
   
-  echo -e "${BLUE}Generando informe HTML: ${REPORT_NAME}...${NC}"
+  echo -e "${BLUE}Generando informe HTML...${NC}"
   
-  # Generar el informe en el pod
+  # Asegurarse de que el directorio stats existe
+  kubectl exec -it logreader -n gibbersound -- sh -c "mkdir -p /logs/stats"
+  
+  # Generar el informe en el pod con timestamp
+  echo -e "${BLUE}Generando informe con timestamp: ${REPORT_NAME}...${NC}"
   kubectl exec -it logreader -n gibbersound -- sh -c "goaccess -f /logs/access.log --log-format=COMBINED -o /logs/\"${REPORT_NAME}\""
   
   if [ $? -ne 0 ]; then
-    echo -e "${RED}Error al generar el informe.${NC}"
+    echo -e "${RED}Error al generar el informe con timestamp.${NC}"
     return 1
   fi
   
-  # Copiar el informe a la máquina local
+  # Generar el informe fijo para acceso web
+  echo -e "${BLUE}Generando informe fijo para acceso web: ${FIXED_REPORT_NAME}...${NC}"
+  kubectl exec -it logreader -n gibbersound -- sh -c "goaccess -f /logs/access.log --log-format=COMBINED -o /logs/\"${FIXED_REPORT_NAME}\""
+  
+  if [ $? -ne 0 ]; then
+    echo -e "${RED}Error al generar el informe fijo.${NC}"
+    return 1
+  fi
+  
+  # Copiar el informe con timestamp a la máquina local
   echo -e "${BLUE}Copiando el informe a la máquina local...${NC}"
   kubectl cp gibbersound/logreader:/logs/"${REPORT_NAME}" ./"${REPORT_NAME}"
   
@@ -63,10 +77,12 @@ generate_report() {
     return 1
   fi
   
-  echo -e "${GREEN}Informe generado correctamente: ${REPORT_NAME}${NC}"
+  echo -e "${GREEN}Informes generados correctamente:${NC}"
+  echo -e "  - Local: ${REPORT_NAME}"
+  echo -e "  - Web: https://gibbersound.com/stats/report.html"
   
-  # Preguntar si quiere abrir el informe
-  read -p "¿Deseas abrir el informe ahora? (s/n): " OPEN_REPORT
+  # Preguntar si quiere abrir el informe local
+  read -p "¿Deseas abrir el informe local ahora? (s/n): " OPEN_REPORT
   if [[ "$OPEN_REPORT" =~ ^[Ss]$ ]]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
       open ./"${REPORT_NAME}"

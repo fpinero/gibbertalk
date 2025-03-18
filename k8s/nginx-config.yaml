@@ -28,6 +28,22 @@ data:
             try_files $uri $uri/ /index.html;
         }
 
+        # Servir directorio de estadísticas desde los logs
+        location /stats/ {
+            alias /var/log/nginx/stats/;
+            autoindex off;
+            # Configuración para navegadores
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            add_header Expires "0";
+            # Para HTML
+            types {
+                text/html html htm;
+            }
+            # Permitir todos los orígenes para facilitar la integración
+            add_header 'Access-Control-Allow-Origin' '*';
+        }
+
         # Configuración de seguridad básica
         add_header X-Frame-Options "SAMEORIGIN";
         add_header X-XSS-Protection "1; mode=block";

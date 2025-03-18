@@ -10,7 +10,7 @@ spec:
     command:
     - sh
     - -c
-    - "apk add goaccess && sleep 3600"
+    - "apk add goaccess && mkdir -p /logs/stats && chmod -R 755 /logs/stats && sleep 3600"
     volumeMounts:
     - name: nginx-logs
       mountPath: /logs
