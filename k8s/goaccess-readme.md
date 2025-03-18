@@ -37,7 +37,9 @@ El script presenta un menú con las siguientes opciones:
 
 1. **Abrir GoAccess en modo interactivo**: Esta opción lanza una interfaz interactiva de GoAccess en la terminal, permitiéndote explorar los logs en tiempo real.
 
-2. **Generar informe HTML con timestamp**: Esta opción genera un informe HTML estático con todas las estadísticas de los logs. El archivo se guarda con un timestamp único para evitar sobrescribir informes anteriores.
+2. **Generar informe HTML con timestamp**: Esta opción genera dos informes HTML:
+   - Un informe local con timestamp que se descarga a tu máquina
+   - Un informe fijo que se guarda en el servidor y es accesible vía web
 
 3. **Salir**: Cierra el script.
 
@@ -56,6 +58,22 @@ El modo interactivo proporciona una interfaz de terminal para navegar por los da
 
 ## Reportes HTML
 
+### Informe local con timestamp
+
+El informe local se guarda en tu máquina con un nombre que incluye la fecha y hora de generación (por ejemplo, `report_20240318_160235.html`).
+
+### Informe accesible vía web
+
+El informe web está siempre disponible en la siguiente URL:
+
+```
+https://gibbersound.com/stats/report.html
+```
+
+Este informe se sobrescribe cada vez que ejecutas la opción 2 del script, por lo que siempre muestra la información más reciente.
+
+## Características de los informes
+
 Los reportes HTML generados ofrecen una visualización completa y detallada de todos los datos de acceso, incluyendo:
 
 - Estadísticas generales
@@ -66,8 +84,6 @@ Los reportes HTML generados ofrecen una visualización completa y detallada de t
 - Navegadores y sistemas operativos
 - Referrers
 - Y mucho más
-
-El informe se guarda localmente con un nombre que incluye la fecha y hora de generación (por ejemplo, `report_20240318_160235.html`).
 
 ## Persistencia de datos
 
@@ -92,12 +108,13 @@ Verifica que:
 2. El PVC `nginx-logs-pvc` existe y está correctamente configurado
 3. No hay recursos limitados que impidan la creación del pod
 
-### No se muestra el informe HTML
+### No se muestra el informe HTML en la web
 
 Comprueba que:
-1. El pod tiene acceso a los logs
-2. La ruta a los logs es correcta
-3. Tienes permisos para copiar archivos desde el pod
+1. El directorio `/var/log/nginx/stats` existe en el pod del frontend
+2. El archivo `report.html` existe en ese directorio
+3. La configuración de Nginx incluye la ubicación `/stats/`
+4. No hay problemas de permisos en los archivos
 
 ## Ejemplos de uso
 
@@ -106,8 +123,8 @@ Comprueba que:
 ```bash
 # Ejecutar el script
 ./k8s/goaccess-report.sh
-# Seleccionar la opción 2 para generar un informe HTML
-# Abrir el informe generado
+# Seleccionar la opción 2 para generar informes HTML
+# Visitar https://gibbersound.com/stats/report.html en tu navegador
 ```
 
 ### Investigación de errores en tiempo real
@@ -118,6 +135,10 @@ Comprueba que:
 # Seleccionar la opción 1 para el modo interactivo
 # Navegar a la sección de códigos de error (4xx, 5xx)
 ```
+
+### Compartir estadísticas con el equipo
+
+Simplemente comparte la URL `https://gibbersound.com/stats/report.html` con los miembros del equipo.
 
 ## Información adicional
 
