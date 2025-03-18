@@ -10,9 +10,10 @@ app = Flask(__name__)
 # Configurar CORS para permitir solicitudes desde los dominios especificados
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["https://gibbersound.com", "https://www.gibbersound.com", "https://stats.gibbersound.com", "http://localhost:5001"],
-        "methods": ["GET", "POST"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "origins": ["https://gibbersound.com", "https://www.gibbersound.com", "https://stats.gibbersound.com", 
+                   "http://localhost:5001", "http://localhost:5000", "*"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Origin", "Accept"]
     }
 })
 
@@ -134,11 +135,15 @@ def serve_manifest():
 @app.after_request
 def add_cors_headers(response):
     # Permitir solicitudes desde los dominios especificados
-    allowed_origins = ["https://gibbersound.com", "https://www.gibbersound.com", "http://localhost:5001"]
+    allowed_origins = ["https://gibbersound.com", "https://www.gibbersound.com", "http://localhost:5001", 
+                      "http://localhost:5000", "*"]
     origin = request.headers.get('Origin')
     
-    if origin in allowed_origins:
-        response.headers.add('Access-Control-Allow-Origin', origin)
+    if origin in allowed_origins or '*' in allowed_origins:
+        if origin:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+        else:
+            response.headers.add('Access-Control-Allow-Origin', '*')
     
     # Permitir credenciales
     response.headers.add('Access-Control-Allow-Credentials', 'true')
@@ -147,7 +152,7 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     
     # Permitir encabezados
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, Accept')
     
     # Permitir que el navegador almacene en caché los resultados de la verificación previa
     response.headers.add('Access-Control-Max-Age', '3600')

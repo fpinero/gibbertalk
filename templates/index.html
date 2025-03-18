@@ -12,7 +12,7 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Meta tags para CORS -->
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <!-- <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"> -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>GibberSound Translator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -33,6 +33,26 @@
         // Establecer la URL base para las solicitudes AJAX
         window.baseUrl = window.location.origin;
         console.log('Base URL for API requests:', window.baseUrl);
+        
+        // Verificar si la API está disponible
+        window.addEventListener('DOMContentLoaded', function() {
+            fetch(window.baseUrl + '/api/health')
+                .then(response => {
+                    if (!response.ok) throw new Error('API no disponible');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('API health check successful:', data);
+                })
+                .catch(error => {
+                    console.warn('API health check - Iniciando modo alternativo:', error);
+                    
+                    if (window.location.hostname !== 'localhost') {
+                        console.log('Configurando fallback a localhost:5001 - Esto es normal si estás ejecutando el servidor localmente');
+                        window.baseUrl = 'http://localhost:5001';
+                    }
+                });
+        });
     </script>
 </head>
 <body>
@@ -93,7 +113,7 @@
         </main>
         
         <footer>
-            <p>&copy; 2025 GibberSound - Proof of Concept v0.2.7 | <a href="mailto:gibbersoundapp@gmail.com" class="contact-link">Contact</a></p>
+            <p>&copy; 2025 GibberSound - Proof of Concept v0.2.8 | <a href="mailto:gibbersoundapp@gmail.com" class="contact-link">Contact</a></p>
         </footer>
     </div>
     

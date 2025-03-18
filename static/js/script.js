@@ -322,20 +322,54 @@ document.addEventListener('DOMContentLoaded', () => {
             const apiUrl = (window.baseUrl || window.location.origin) + '/api/chat';
             console.log(`API URL: ${apiUrl}`);
             
-            // Realizar la solicitud a la API
-            console.log('Fetching from API endpoint...');
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Origin': window.location.origin
-                },
-                body: JSON.stringify({ message: userMessage }),
-                credentials: 'same-origin'
-            });
+            let response;
+            let fallbackAttempted = false;
+            
+            try {
+                // Realizar la solicitud a la API
+                console.log('Fetching from API endpoint...');
+                response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    body: JSON.stringify({ message: userMessage }),
+                    credentials: 'same-origin'
+                });
+            } catch (fetchError) {
+                console.error('Error en fetch inicial:', fetchError);
+                
+                // Si estamos en producción, intentar con localhost como fallback
+                if (!fallbackAttempted && window.location.hostname !== 'localhost') {
+                    fallbackAttempted = true;
+                    console.log('Intentando fallback a localhost:5001...');
+                    const fallbackUrl = 'http://localhost:5001/api/chat';
+                    
+                    response = await fetch(fallbackUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ message: userMessage })
+                    });
+                } else {
+                    throw fetchError;
+                }
+            }
             
             console.log('Response status:', response.status);
             console.log('Response headers:', [...response.headers.entries()]);
+            
+            // Verificar el tipo de contenido de la respuesta
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.indexOf('application/json') === -1) {
+                // No es JSON, probablemente es HTML
+                const textResponse = await response.text();
+                console.error('Recibida respuesta no-JSON:', textResponse.substring(0, 100) + '...');
+                console.warn('Esto suele indicar un problema de configuración del servidor. Comprueba que el servidor esté ejecutándose y que la ruta de la API sea correcta.');
+                throw new Error(`Error de API: respuesta no válida (${contentType})`);
+            }
             
             const data = await response.json();
             console.log('Response data received:', data ? 'Data received successfully' : 'No data received');

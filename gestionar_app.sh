@@ -41,22 +41,53 @@ detener_app() {
     verificar_app
     if [ $? -eq 0 ]; then
         echo -e "\n${YELLOW}Deteniendo la aplicación...${NC}"
-        PIDS=$(lsof -i :$PUERTO | grep LISTEN | awk '{print $2}' | sort -u)
+        
+        # Buscar procesos relacionados con gunicorn
+        GUNICORN_PIDS=$(ps aux | grep "gunicorn" | grep -v grep | awk '{print $2}')
+        
+        # Buscar procesos usando el puerto
+        PORT_PIDS=$(lsof -i :$PUERTO | grep LISTEN | awk '{print $2}' | sort -u)
+        
+        # Combinar los PIDs encontrados
+        ALL_PIDS="$GUNICORN_PIDS $PORT_PIDS"
+        UNIQUE_PIDS=$(echo "$ALL_PIDS" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+        
+        if [ -z "$UNIQUE_PIDS" ]; then
+            echo -e "${YELLOW}No se encontraron procesos de la aplicación.${NC}"
+            return
+        fi
+        
+        echo -e "\n${YELLOW}Procesos encontrados:${NC}"
+        for PID in $UNIQUE_PIDS; do
+            ps -p $PID -o pid,ppid,command
+        done
         
         # Confirmar antes de matar procesos
         echo -e "${RED}¿Estás seguro de que quieres detener estos procesos? (s/n)${NC}"
         read -r respuesta
         if [[ "$respuesta" =~ ^[Ss]$ ]]; then
-            kill $PIDS
+            for PID in $UNIQUE_PIDS; do
+                echo -e "${YELLOW}Deteniendo PID $PID...${NC}"
+                kill $PID
+            done
             echo -e "${GREEN}Procesos detenidos.${NC}"
             
             # Verificar si se detuvo correctamente
-            sleep 1
+            sleep 2
             verificar_app
             if [ $? -eq 1 ]; then
                 echo -e "${GREEN}✓ La aplicación se ha detenido correctamente.${NC}"
             else
-                echo -e "${RED}✗ No se pudieron detener todos los procesos. Intenta con: ${YELLOW}kill -9 $PIDS${NC}"
+                echo -e "${RED}✗ No se pudieron detener todos los procesos.${NC}"
+                echo -e "${YELLOW}¿Deseas forzar la terminación de los procesos restantes? (s/n)${NC}"
+                read -r respuesta
+                if [[ "$respuesta" =~ ^[Ss]$ ]]; then
+                    REMAINING_PIDS=$(lsof -i :$PUERTO | grep LISTEN | awk '{print $2}' | sort -u)
+                    if [ ! -z "$REMAINING_PIDS" ]; then
+                        kill -9 $REMAINING_PIDS
+                        echo -e "${GREEN}Procesos terminados forzosamente.${NC}"
+                    fi
+                fi
             fi
         else
             echo -e "${YELLOW}Operación cancelada.${NC}"
@@ -84,14 +115,20 @@ iniciar_app() {
             fi
         fi
         
-        # Iniciar la aplicación en segundo plano
-        python app.py > app.log 2>&1 &
+        # Verificar que start_app.sh tenga permisos de ejecución
+        if [ ! -x "./start_app.sh" ]; then
+            echo -e "${YELLOW}Dando permisos de ejecución a start_app.sh...${NC}"
+            chmod +x ./start_app.sh
+        fi
+        
+        # Iniciar la aplicación con start_app.sh en segundo plano
+        ./start_app.sh > app.log 2>&1 &
         PID=$!
-        echo -e "${GREEN}✓ Aplicación iniciada con PID: $PID${NC}"
+        echo -e "${GREEN}✓ Aplicación iniciada con PID: $PID usando gunicorn${NC}"
         echo -e "${YELLOW}Los logs se están guardando en: $(pwd)/app.log${NC}"
         
         # Esperar un momento y verificar si se inició correctamente
-        sleep 2
+        sleep 3
         if ps -p $PID > /dev/null; then
             echo -e "${GREEN}✓ La aplicación se está ejecutando.${NC}"
             echo -e "${BLUE}Puedes acceder a ella en: http://localhost:$PUERTO${NC}"
@@ -128,15 +165,64 @@ verificar_salud() {
 # Función para mostrar los logs
 mostrar_logs() {
     if [ -f "app.log" ]; then
-        echo -e "${YELLOW}Últimas 20 líneas de los logs:${NC}"
-        tail -n 20 app.log
+        echo -e "${YELLOW}Últimas 30 líneas de los logs:${NC}"
+        tail -n 30 app.log
         
-        echo -e "\n${YELLOW}Opciones:${NC}"
-        echo -e "1. Para ver más líneas: ${BLUE}tail -n 50 app.log${NC}"
-        echo -e "2. Para seguir los logs en tiempo real: ${BLUE}tail -f app.log${NC}"
+        echo -e "\n${YELLOW}Opciones de logs:${NC}"
+        echo -e "1. Ver más líneas"
+        echo -e "2. Seguir los logs en tiempo real"
+        echo -e "3. Buscar errores en los logs"
+        echo -e "4. Volver al menú principal"
+        
+        echo -e "${BLUE}Selecciona una opción:${NC}"
+        read -r log_opcion
+        
+        case $log_opcion in
+            1)
+                echo -e "${YELLOW}¿Cuántas líneas deseas ver?${NC}"
+                read -r num_lineas
+                if [[ "$num_lineas" =~ ^[0-9]+$ ]]; then
+                    tail -n $num_lineas app.log | less
+                else
+                    echo -e "${RED}Número de líneas inválido.${NC}"
+                fi
+                ;;
+            2)
+                echo -e "${YELLOW}Siguiendo los logs en tiempo real (presiona Ctrl+C para salir)...${NC}"
+                tail -f app.log
+                ;;
+            3)
+                echo -e "${YELLOW}Buscando errores en los logs...${NC}"
+                grep -i "error\|exception\|failed\|traceback" app.log
+                ;;
+            4)
+                return
+                ;;
+            *)
+                echo -e "${RED}Opción inválida.${NC}"
+                ;;
+        esac
     else
         echo -e "${RED}✗ No se encontró el archivo de logs (app.log).${NC}"
         echo -e "${YELLOW}Inicia la aplicación primero para generar logs.${NC}"
+    fi
+}
+
+# Función para reiniciar la aplicación
+reiniciar_app() {
+    echo -e "${YELLOW}Reiniciando la aplicación...${NC}"
+    
+    # Primero detener la aplicación
+    detener_app
+    
+    # Comprobar si la aplicación se detuvo correctamente
+    verificar_app
+    if [ $? -eq 1 ]; then
+        # Si se detuvo correctamente, iniciarla de nuevo
+        iniciar_app
+    else
+        echo -e "${RED}✗ No se pudo detener la aplicación correctamente. No se puede reiniciar.${NC}"
+        echo -e "${YELLOW}Intenta detener la aplicación manualmente con la opción 2.${NC}"
     fi
 }
 
@@ -146,9 +232,10 @@ while true; do
     echo -e "${YELLOW}1. Verificar estado de la aplicación${NC}"
     echo -e "${YELLOW}2. Detener la aplicación${NC}"
     echo -e "${YELLOW}3. Iniciar la aplicación${NC}"
-    echo -e "${YELLOW}4. Verificar estado de salud de la API${NC}"
-    echo -e "${YELLOW}5. Ver logs de la aplicación${NC}"
-    echo -e "${YELLOW}6. Salir${NC}"
+    echo -e "${YELLOW}4. Reiniciar la aplicación${NC}"
+    echo -e "${YELLOW}5. Verificar estado de salud de la API${NC}"
+    echo -e "${YELLOW}6. Ver logs de la aplicación${NC}"
+    echo -e "${YELLOW}7. Salir${NC}"
     
     echo -e "${BLUE}Selecciona una opción:${NC}"
     read -r opcion
@@ -157,9 +244,10 @@ while true; do
         1) verificar_app ;;
         2) detener_app ;;
         3) iniciar_app ;;
-        4) verificar_salud ;;
-        5) mostrar_logs ;;
-        6) echo -e "${GREEN}¡Hasta luego!${NC}"; exit 0 ;;
+        4) reiniciar_app ;;
+        5) verificar_salud ;;
+        6) mostrar_logs ;;
+        7) echo -e "${GREEN}¡Hasta luego!${NC}"; exit 0 ;;
         *) echo -e "${RED}Opción inválida. Por favor, selecciona una opción válida.${NC}" ;;
     esac
     
