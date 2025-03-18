@@ -2,7 +2,7 @@
 
 ## Introducción
 
-Este documento describe cómo utilizar el script `goaccess-report.sh` para analizar los logs de Nginx en el clúster Kubernetes de Gibbersound. El script proporciona una interfaz sencilla para acceder a las funcionalidades de GoAccess sin necesidad de instalar software adicional en tu máquina local.
+Este documento describe cómo utilizar el script `goaccess-report.sh` y el CronJob automatizado para analizar los logs de Nginx en el clúster Kubernetes de Gibbersound. Estas herramientas proporcionan una interfaz sencilla para acceder a las funcionalidades de GoAccess sin necesidad de instalar software adicional en tu máquina local.
 
 ## ¿Qué es GoAccess?
 
@@ -14,16 +14,55 @@ Este documento describe cómo utilizar el script `goaccess-report.sh` para anali
 - `kubectl` configurado correctamente para comunicarse con el clúster
 - Permisos para crear pods en el namespace `gibbersound`
 
-## Instalación
+## Componentes del sistema
 
-No se requiere instalación específica. El script utiliza un pod temporal con Alpine Linux que instala GoAccess automáticamente.
-
-## Estructura de archivos
-
-- `goaccess-report.sh`: Script principal para interactuar con GoAccess
+### Script interactivo
+- `goaccess-report.sh`: Script principal para interactuar con GoAccess de forma manual
 - `logreader-pod.yaml`: Definición del pod temporal que se utiliza para ejecutar GoAccess
 
-## Uso del script
+### Generación automática
+- `goaccess-cronjob.yaml`: CronJob que genera automáticamente informes de GoAccess cada 30 minutos
+
+## Generación automática de informes
+
+El CronJob `goaccess-reporter` está configurado para generar automáticamente un informe actualizado cada 30 minutos. Estos informes están disponibles directamente en:
+
+```
+https://gibbersound.com/stats/report.html
+```
+
+No es necesario ejecutar ningún comando manual para acceder a esta información, que siempre estará disponible y actualizada periódicamente.
+
+### Configuración del CronJob
+
+El CronJob está configurado con las siguientes características:
+
+- **Frecuencia**: Se ejecuta cada 30 minutos
+- **Concurrencia**: No permite ejecuciones simultáneas (evita conflictos)
+- **Historial**: Mantiene un registro de los últimos 3 jobs exitosos y 1 fallido
+- **Persistencia**: Utiliza el mismo PVC que Nginx para acceder a los logs
+
+Para aplicar o modificar el CronJob:
+
+```bash
+kubectl apply -f k8s/goaccess-cronjob.yaml
+```
+
+Para verificar el estado del CronJob:
+
+```bash
+kubectl get cronjobs -n gibbersound
+```
+
+Para ver los últimos jobs ejecutados:
+
+```bash
+kubectl get jobs -n gibbersound
+```
+
+## Uso del script manual
+
+Si necesitas generar informes bajo demanda o usar la interfaz interactiva de GoAccess, puedes utilizar el script manual.
 
 ### Ejecutar el script
 
@@ -74,7 +113,9 @@ El informe web está siempre disponible en la siguiente URL:
 https://gibbersound.com/stats/report.html
 ```
 
-Este informe se sobrescribe cada vez que ejecutas la opción 2 del script, por lo que siempre muestra la información más reciente.
+Este informe se actualiza por dos vías:
+- Automáticamente cada 30 minutos a través del CronJob
+- Manualmente cuando ejecutas la opción 2 del script
 
 El script te ofrece la opción de abrir este informe directamente en tu navegador.
 
@@ -93,26 +134,30 @@ Los reportes HTML generados ofrecen una visualización completa y detallada de t
 
 ## Persistencia de datos
 
-El pod `logreader` se mantiene después de cerrar el script, lo que permite ejecutar el script múltiples veces sin tener que reinstalar GoAccess. Los logs se almacenan en un PersistentVolumeClaim de Kubernetes, lo que garantiza que los datos no se pierdan.
+Los logs se almacenan en un PersistentVolumeClaim de Kubernetes, lo que garantiza que los datos no se pierdan y estén disponibles tanto para el CronJob automático como para el script manual.
 
 ## Personalización
 
+### Modificar la frecuencia del CronJob
+
+Si deseas cambiar la frecuencia de generación de informes, edita el campo `schedule` en el archivo `goaccess-cronjob.yaml`. La configuración utiliza el formato estándar de cron:
+
+```yaml
+schedule: "*/30 * * * *"  # Cambiar según necesidades
+```
+
 ### Formato de logs
 
-El script está configurado para trabajar con el formato COMBINED de Nginx. Si cambias el formato de tus logs, modifica el parámetro `--log-format` en las funciones `open_interactive` y `generate_report` del script.
-
-### Ubicación de los logs
-
-Si la ubicación de los logs cambia, actualiza la ruta en las mismas funciones mencionadas anteriormente.
+Los scripts están configurados para trabajar con el formato COMBINED de Nginx. Si cambias el formato de tus logs, modifica el parámetro `--log-format` en las funciones correspondientes.
 
 ## Solución de problemas
 
-### El pod no se crea correctamente
+### El CronJob no genera informes
 
 Verifica que:
-1. Tienes permisos para crear pods en el namespace `gibbersound`
-2. El PVC `nginx-logs-pvc` existe y está correctamente configurado
-3. No hay recursos limitados que impidan la creación del pod
+1. El CronJob está activo: `kubectl get cronjobs -n gibbersound`
+2. Revisa los logs del último job: `kubectl logs job/<nombre-del-job> -n gibbersound`
+3. El PVC está correctamente montado y accesible
 
 ### No se muestra el informe HTML en la web
 
@@ -124,7 +169,11 @@ Comprueba que:
 
 ## Ejemplos de uso
 
-### Análisis diario del tráfico web
+### Acceso directo al informe
+
+Simplemente visita `https://gibbersound.com/stats/report.html` en tu navegador para ver el último informe generado automáticamente.
+
+### Análisis manual bajo demanda
 
 ```bash
 # Ejecutar el script

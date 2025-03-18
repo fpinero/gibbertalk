@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: goaccess-reporter
+  namespace: gibbersound
+spec:
+  schedule: "*/30 * * * *"  # Cada 30 minutos
+  concurrencyPolicy: Forbid  # Evitar ejecuciones concurrentes
+  successfulJobsHistoryLimit: 3  # Mantener historial de 3 jobs exitosos
+  failedJobsHistoryLimit: 1  # Mantener historial de 1 job fallido
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: goaccess-generator
+            image: alpine:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Instalar GoAccess
+              apk add --no-cache goaccess
+              
+              # Asegurar que existe el directorio stats
+              mkdir -p /logs/stats
+              
+              # Generar timestamp para el nombre del archivo
+              TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+              echo "Generando informe a las $TIMESTAMP"
+              
+              # Generar el informe fijo para acceso web
+              goaccess -f /logs/access.log --log-format=COMBINED -o /logs/stats/report.html
+              
+              # Configurar los permisos correctos
+              chmod 755 /logs/stats/report.html
+              
+              # Confirmar la generación exitosa
+              echo "Informe generado exitosamente - $(date)"
+            volumeMounts:
+            - name: nginx-logs
+              mountPath: /logs
+          restartPolicy: OnFailure
+          volumes:
+          - name: nginx-logs
+            persistentVolumeClaim:
+              claimName: nginx-logs-pvc 
