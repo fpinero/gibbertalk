@@ -7,7 +7,7 @@ metadata:
     app: gibbersound
     tier: frontend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: gibbersound
@@ -18,9 +18,16 @@ spec:
         app: gibbersound
         tier: frontend
     spec:
+      initContainers:
+      - name: init-chmod-logs
+        image: busybox
+        command: ['sh', '-c', 'mkdir -p /var/log/nginx && chmod 777 /var/log/nginx']
+        volumeMounts:
+        - name: nginx-logs
+          mountPath: /var/log/nginx
       containers:
-      - name: gibbersound-frontend
-        image: fpinero/gibbersound-frontend:0.2.4
+      - name: frontend
+        image: fpinero/gibbersound-frontend:0.2.7
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -45,5 +52,20 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 5
+        volumeMounts:
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+      volumes:
+      - name: nginx-logs
+        persistentVolumeClaim:
+          claimName: nginx-logs-pvc
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+          items:
+          - key: default.conf
+            path: default.conf
       nodeSelector:
         kubernetes.io/arch: arm64 

@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: goaccess-ingress
+  namespace: gibbersound
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web, websecure
+    # Deshabilitar redirecciones automáticas
+    traefik.ingress.kubernetes.io/redirect-entry-point: ""
+    traefik.ingress.kubernetes.io/redirect-permanent: "false"
+    traefik.ingress.kubernetes.io/redirect-regex: ""
+    traefik.ingress.kubernetes.io/redirect-replacement: ""
+    # Mantener el protocolo original
+    traefik.ingress.kubernetes.io/router.middlewares: default-goaccess-simple-headers@kubernetescrd
+spec:
+  rules:
+    - host: stats.gibbersound.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: goaccess
+                port:
+                  number: 7890 

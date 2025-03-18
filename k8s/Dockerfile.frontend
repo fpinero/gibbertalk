@@ -1,3 +1,15 @@
+# Etapa de construcción
+FROM python:3.9-slim as builder
+
+# Copiar archivos necesarios
+COPY templates/ /app/templates/
+COPY k8s/process_templates.py /app/
+
+# Procesar plantillas
+WORKDIR /app
+RUN python process_templates.py
+
+# Etapa final
 FROM nginx:alpine
 
 # Configuración para arquitectura ARM
@@ -5,11 +17,19 @@ ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 RUN echo "Building on $BUILDPLATFORM for $TARGETPLATFORM"
 
-# Copiar solo archivos estáticos (no las plantillas)
-COPY static /usr/share/nginx/html/static
+# Crear directorio para los archivos estáticos
+RUN mkdir -p /usr/share/nginx/html/static
+
+# Copiar archivos estáticos y HTML procesado
+COPY static/ /usr/share/nginx/html/static/
+COPY --from=builder /app/build/index.html /usr/share/nginx/html/
 
 # Configuración de Nginx
 COPY k8s/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Establecer permisos correctos
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
 
 EXPOSE 80
 

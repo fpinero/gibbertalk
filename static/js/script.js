@@ -10,9 +10,22 @@ let visualizerAnimationFrame = null; // Para controlar la animación del visuali
 let currentAudioSource = null; // Para mantener referencia a la fuente de audio actual
 let aiResponseInProgress = false; // Variable para controlar si se está procesando una respuesta de IA
 
+// Función para rastrear eventos en Google Analytics
+function trackEvent(category, action, label = null) {
+    if (typeof gtag !== 'undefined') {
+        gtag('event', action, {
+            'event_category': category,
+            'event_label': label
+        });
+    }
+}
+
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded - Initializing ggwave');
+    
+    // Rastrear carga de página
+    trackEvent('Page', 'Load');
     
     // Inicializar el tema
     initTheme();
@@ -53,22 +66,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedTheme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
             themeToggle.checked = true;
+            trackEvent('Theme', 'Load', 'Dark');
         } else {
             document.documentElement.setAttribute('data-theme', 'light');
             themeToggle.checked = false;
+            trackEvent('Theme', 'Load', 'Light');
         }
         
         // Añadir evento para cambiar el tema
         themeToggle.addEventListener('change', function() {
-            if (this.checked) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                localStorage.setItem('theme', 'dark');
-                console.log('Tema oscuro activado');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-                console.log('Tema claro activado');
-            }
+            const newTheme = this.checked ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            trackEvent('Theme', 'Change', newTheme);
+            console.log(`Tema ${newTheme} activado`);
             
             // Actualizar el visualizador si está activo
             if (visualizerAnimationFrame) {
@@ -289,6 +300,9 @@ document.addEventListener('DOMContentLoaded', () => {
         disableButton(); // Mantener el botón deshabilitado
         
         try {
+            // Rastrear inicio de solicitud a la IA
+            trackEvent('AI', 'Request', userMessage.substring(0, 50));
+            
             document.getElementById('status').textContent = 'Requesting AI response...';
             console.log('Sending request to DeepSeek API...');
             
@@ -327,6 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Response data received:', data ? 'Data received successfully' : 'No data received');
             
             if (response.ok) {
+                // Rastrear respuesta exitosa de la IA
+                trackEvent('AI', 'Response', 'Success');
+                
                 console.log('API response successful');
                 // Actualizar el estado
                 document.getElementById('status').textContent = 'AI response received, generating audio...';
@@ -348,6 +365,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetInterface();
                 
             } else {
+                // Rastrear error en la respuesta de la IA
+                trackEvent('AI', 'Error', data.error || 'Unknown error');
+                
                 console.error('API response error:', data.error || 'Unknown error');
                 // Mostrar el error
                 responseTextarea.value = `Error: ${data.error || 'Unknown error'}`;
@@ -398,6 +418,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Añadir evento click al botón
     translateBtn.addEventListener('click', async () => {
         console.log('Translate button clicked');
+        
+        // Rastrear clic en el botón de envío
+        trackEvent('Button', 'Click', 'Send');
         
         // Evitar múltiples clics mientras se procesa
         if (audioGenerationInProgress || aiResponseInProgress) {

@@ -10,7 +10,7 @@ app = Flask(__name__)
 # Configurar CORS para permitir solicitudes desde los dominios especificados
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["https://gibbersound.com", "https://www.gibbersound.com", "http://localhost:5001"],
+        "origins": ["https://gibbersound.com", "https://www.gibbersound.com", "https://stats.gibbersound.com", "http://localhost:5001"],
         "methods": ["GET", "POST"],
         "allow_headers": ["Content-Type", "Authorization"]
     }
