@@ -44,6 +44,7 @@ generate_report() {
   TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
   REPORT_NAME="report_${TIMESTAMP}.html"
   FIXED_REPORT_NAME="stats/report.html"
+  WEB_URL="https://gibbersound.com/stats/report.html"
   
   echo -e "${BLUE}Generando informe HTML...${NC}"
   
@@ -79,19 +80,60 @@ generate_report() {
   
   echo -e "${GREEN}Informes generados correctamente:${NC}"
   echo -e "  - Local: ${REPORT_NAME}"
-  echo -e "  - Web: https://gibbersound.com/stats/report.html"
+  echo -e "  - Web: ${WEB_URL}"
   
-  # Preguntar si quiere abrir el informe local
-  read -p "¿Deseas abrir el informe local ahora? (s/n): " OPEN_REPORT
-  if [[ "$OPEN_REPORT" =~ ^[Ss]$ ]]; then
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-      open ./"${REPORT_NAME}"
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-      xdg-open ./"${REPORT_NAME}"
-    else
-      echo -e "${YELLOW}No se pudo detectar el sistema operativo para abrir el archivo automáticamente.${NC}"
-      echo -e "${YELLOW}Por favor, abre manualmente el archivo: ${REPORT_NAME}${NC}"
-    fi
+  # Preguntar sobre cómo ver los informes
+  echo -e "\n${BLUE}¿Cómo deseas ver los informes?${NC}"
+  echo -e "${GREEN}1)${NC} Abrir informe local"
+  echo -e "${GREEN}2)${NC} Abrir informe web"
+  echo -e "${GREEN}3)${NC} Abrir ambos informes"
+  echo -e "${GREEN}4)${NC} No abrir ningún informe"
+  
+  read -p "Opción [1-4]: " VIEW_OPTION
+  
+  case $VIEW_OPTION in
+    1)
+      open_local_report
+      ;;
+    2)
+      open_web_report
+      ;;
+    3)
+      open_local_report
+      open_web_report
+      ;;
+    4)
+      echo -e "${BLUE}No se abrirá ningún informe.${NC}"
+      ;;
+    *)
+      echo -e "${RED}Opción inválida. No se abrirá ningún informe.${NC}"
+      ;;
+  esac
+}
+
+# Función para abrir el informe local
+open_local_report() {
+  echo -e "${BLUE}Abriendo informe local...${NC}"
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    open ./"${REPORT_NAME}"
+  elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    xdg-open ./"${REPORT_NAME}"
+  else
+    echo -e "${YELLOW}No se pudo detectar el sistema operativo para abrir el archivo automáticamente.${NC}"
+    echo -e "${YELLOW}Por favor, abre manualmente el archivo: ${REPORT_NAME}${NC}"
+  fi
+}
+
+# Función para abrir el informe web
+open_web_report() {
+  echo -e "${BLUE}Abriendo informe web...${NC}"
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    open "${WEB_URL}"
+  elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    xdg-open "${WEB_URL}"
+  else
+    echo -e "${YELLOW}No se pudo detectar el sistema operativo para abrir la URL automáticamente.${NC}"
+    echo -e "${YELLOW}Por favor, visita: ${WEB_URL}${NC}"
   fi
 }
 
@@ -109,9 +151,10 @@ main() {
   echo -e "\nSelecciona una opción:"
   echo -e "${GREEN}1)${NC} Abrir GoAccess en modo interactivo"
   echo -e "${GREEN}2)${NC} Generar informe HTML con timestamp"
-  echo -e "${GREEN}3)${NC} Salir"
+  echo -e "${GREEN}3)${NC} Abrir último informe web"
+  echo -e "${GREEN}4)${NC} Salir"
   
-  read -p "Opción [1-3]: " OPTION
+  read -p "Opción [1-4]: " OPTION
   
   case $OPTION in
     1)
@@ -121,6 +164,10 @@ main() {
       generate_report
       ;;
     3)
+      WEB_URL="https://gibbersound.com/stats/report.html"
+      open_web_report
+      ;;
+    4)
       echo -e "${BLUE}Saliendo...${NC}"
       exit 0
       ;;
