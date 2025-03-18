@@ -340,8 +340,17 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (fetchError) {
                 console.error('Error en fetch inicial:', fetchError);
                 
-                // Si estamos en producción, intentar con localhost como fallback
-                if (!fallbackAttempted && window.location.hostname !== 'localhost') {
+                // Determinar si estamos en producción o desarrollo
+                const isProd = window.location.hostname === 'gibbersound.com' || 
+                             window.location.hostname === 'www.gibbersound.com';
+                
+                if (isProd) {
+                    // En producción, no intentamos fallback a localhost
+                    console.error('Error de conexión en entorno de producción');
+                    responseTextarea.value = 'Error de conexión al servidor. Por favor, inténtalo de nuevo más tarde.';
+                    throw new Error('Error de conexión al API en producción: ' + fetchError.message);
+                } else if (!fallbackAttempted && window.location.hostname !== 'localhost') {
+                    // Solo en desarrollo intentamos fallback a localhost
                     fallbackAttempted = true;
                     console.log('Intentando fallback a localhost:5001...');
                     const fallbackUrl = 'http://localhost:5001/api/chat';
@@ -412,9 +421,27 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error getting AI response:', error);
             console.error('Error details:', error.message, error.stack);
-            document.getElementById('aiResponseText').value = `Error: ${error.message}`;
-            document.getElementById('status').textContent = 'Error getting AI response';
-            aiResponseInProgress = false; // Marcar que ya no hay respuesta en progreso
+            
+            // Preparar un mensaje de error amigable para el usuario
+            let userErrorMessage = 'Error: ';
+            
+            if (error.message.includes('Failed to fetch') || error.message.includes('conexión')) {
+                userErrorMessage += 'No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet e inténtalo de nuevo más tarde.';
+            } else if (error.message.includes('respuesta no válida')) {
+                userErrorMessage += 'El servidor respondió en un formato inesperado. El equipo técnico ha sido notificado.';
+            } else {
+                userErrorMessage += error.message;
+            }
+            
+            // Rastrear el error para análisis
+            trackEvent('AI', 'Error', error.message);
+            
+            // Mostrar el error al usuario
+            document.getElementById('aiResponseText').value = userErrorMessage;
+            document.getElementById('status').textContent = 'Error al obtener respuesta de IA';
+            
+            // Restablecer estado
+            aiResponseInProgress = false;
             resetInterface();
         }
     }

@@ -45,11 +45,21 @@
                     console.log('API health check successful:', data);
                 })
                 .catch(error => {
-                    console.warn('API health check - Iniciando modo alternativo:', error);
+                    // Determinar si estamos en producción o desarrollo
+                    const isProd = window.location.hostname === 'gibbersound.com' || 
+                                 window.location.hostname === 'www.gibbersound.com';
                     
-                    if (window.location.hostname !== 'localhost') {
+                    if (isProd) {
+                        console.warn('API health check fallido en producción:', error);
+                        console.log('Manteniendo URL original para API en producción:', window.baseUrl);
+                        // En producción, NO cambiamos la URL base
+                    } else {
+                        console.warn('API health check - Iniciando modo alternativo:', error);
                         console.log('Configurando fallback a localhost:5001 - Esto es normal si estás ejecutando el servidor localmente');
-                        window.baseUrl = 'http://localhost:5001';
+                        // Solo en desarrollo cambiamos a localhost si no estamos ya en localhost
+                        if (window.location.hostname !== 'localhost') {
+                            window.baseUrl = 'http://localhost:5001';
+                        }
                     }
                 });
         });
@@ -113,7 +123,7 @@
         </main>
         
         <footer>
-            <p>&copy; 2025 GibberSound - Proof of Concept v0.2.8 | <a href="mailto:gibbersoundapp@gmail.com" class="contact-link">Contact</a></p>
+            <p>&copy; 2025 GibberSound - Proof of Concept v0.3.1 | <a href="mailto:gibbersoundapp@gmail.com" class="contact-link">Contact</a></p>
         </footer>
     </div>
     

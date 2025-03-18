@@ -16,12 +16,17 @@ GibberSound es una aplicación web que utiliza el protocolo ggwave para converti
 - Interfaz de usuario moderna y responsive
 - Comunicación basada en el protocolo ggwave
 - Diseño minimalista y fácil de usar
+- Integración con DeepSeek AI para responder preguntas de los usuarios
+- Gestión robusta de errores y mecanismos de fallback
+- Sistema de visualización de audio en tiempo real
 
 ## Tecnologías utilizadas
 
 - **Frontend**: HTML5, CSS3, JavaScript
 - **Backend**: Python 3.12 con Flask
+- **Servidor de producción**: Gunicorn con múltiples workers
 - **Comunicación de audio**: Biblioteca ggwave.js
+- **IA**: API de DeepSeek para procesamiento de lenguaje natural
 - **Estilos**: CSS personalizado con variables para fácil personalización
 - **Iconos**: Material Design Icons
 
@@ -30,6 +35,8 @@ GibberSound es una aplicación web que utiliza el protocolo ggwave para converti
 ```
 gibbertalk/
 ├── app.py                 # Aplicación principal de Flask
+├── start_app.sh           # Script para iniciar la aplicación con gunicorn
+├── gestionar_app.sh       # Script para gestionar todos los aspectos de la aplicación
 ├── requirements.txt       # Dependencias de Python
 ├── static/                # Archivos estáticos
 │   ├── css/               # Hojas de estilo
@@ -40,6 +47,7 @@ gibbertalk/
 │   │   ├── favicon-32x32.png
 │   │   ├── apple-touch-icon.png
 │   │   └── site.webmanifest
+│   ├── sm/                # Source maps para JavaScript
 │   └── js/                # Scripts de JavaScript
 │       ├── ggwave.js      # Biblioteca para comunicación de audio
 │       └── script.js      # Lógica principal de la aplicación
@@ -54,6 +62,7 @@ gibbertalk/
 
 - Python 3.12 o superior
 - pip (gestor de paquetes de Python)
+- Gunicorn (para ejecución en modo producción)
 
 ### Pasos para la instalación
 
@@ -74,19 +83,72 @@ gibbertalk/
    pip install -r requirements.txt
    ```
 
-4. Ejecuta la aplicación:
+4. Configura la API KEY de DeepSeek:
+   ```bash
+   export DEEPSEEK_API_KEY='tu-api-key'
+   ```
+
+5. Ejecuta la aplicación (modo desarrollo):
    ```bash
    python app.py
    ```
+   
+   O en modo producción:
+   ```bash
+   ./start_app.sh
+   ```
 
-5. Abre tu navegador y visita `http://localhost:5001`
+   También puedes usar el script de gestión para una experiencia más completa:
+   ```bash
+   ./gestionar_app.sh
+   ```
+
+6. Abre tu navegador y visita `http://localhost:5001`
+
+## Gestión de la aplicación
+
+GibberTalk incluye varios scripts para facilitar la gestión de la aplicación:
+
+### Script `gestionar_app.sh`
+
+Este script proporciona una interfaz completa para gestionar todos los aspectos de la aplicación:
+- Verificar si la aplicación está en ejecución
+- Iniciar la aplicación con gunicorn
+- Detener la aplicación
+- Reiniciar la aplicación
+- Verificar el estado de salud de la API
+- Ver y analizar los logs
+
+Consulta [README_GESTION_APP.md](README_GESTION_APP.md) para más detalles.
+
+### Script `start_app.sh`
+
+Este script inicia la aplicación en modo producción usando gunicorn con múltiples workers para un mejor rendimiento y estabilidad.
+
+## Características de resiliencia
+
+GibberTalk incluye varias características para mejorar la resiliencia y robustez:
+
+### Gestión de errores
+
+- Verificación robusta del tipo de contenido en respuestas API
+- Mensajes de error detallados con información de diagnóstico
+- Captura y registro de excepciones para facilitar la depuración
+
+### Mecanismo de fallback
+
+La aplicación incluye un sistema de fallback para cuando el servidor principal no está disponible:
+- Detección automática de problemas de conexión con el servidor
+- Redirección transparente a un servidor local para pruebas y desarrollo
+- Comprobación de salud de la API al iniciar
 
 ## Uso
 
 1. Escribe un mensaje en el área de texto
 2. Haz clic en el botón "Send"
 3. La aplicación convertirá tu mensaje en una señal de audio
-4. Otros dispositivos con GibberSound pueden capturar y decodificar esta señal
+4. La respuesta de DeepSeek AI será recibida y también convertida en audio
+5. Otros dispositivos con GibberSound pueden capturar y decodificar estas señales
 
 ## Contribución
 

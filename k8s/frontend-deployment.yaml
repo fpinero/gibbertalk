@@ -27,7 +27,7 @@ spec:
           mountPath: /var/log/nginx
       containers:
       - name: frontend
-        image: fpinero/gibbersound-frontend:0.2.8
+        image: fpinero/gibbersound-frontend:0.3.1
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -63,7 +63,7 @@ spec:
           claimName: nginx-logs-pvc
       - name: nginx-config
         configMap:
-          name: nginx-config
+          name: frontend-nginx-config
           items:
           - key: default.conf
             path: default.conf

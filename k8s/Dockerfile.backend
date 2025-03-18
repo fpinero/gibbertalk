@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Instalar dependencias
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Copiar el código de la aplicación
 # Primero copiamos solo app.py para verificar que existe
@@ -23,8 +23,12 @@ RUN ls -la /app && \
     echo "Verificando que app.py existe:" && \
     if [ -f /app/app.py ]; then echo "app.py encontrado"; else echo "app.py NO encontrado" && exit 1; fi
 
-# Exponer el puerto que usa Flask
+# Exponer el puerto que usa Flask/Gunicorn
 EXPOSE 5001
 
-# Comando para iniciar la aplicación
-CMD ["python", "app.py"] 
+# Variable de entorno para modo producción
+ENV FLASK_ENV=production
+ENV FLASK_APP=app.py
+
+# Comando para iniciar la aplicación con gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "--timeout", "120", "app:app"] 
