@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: gibbersound-backend
-        image: fpinero/gibbersound-backend:0.3.1
+        image: fpinero/gibbersound-backend:0.3.2
         imagePullPolicy: Always
         ports:
         - containerPort: 5001
