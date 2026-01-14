@@ -1,39 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Login page loaded');
+    console.log('Matrix login page loaded');
     
-    const loginBtn = document.getElementById('loginBtn');
     const passwordInput = document.getElementById('passwordInput');
-    const errorMessage = document.getElementById('errorMessage');
-    const successMessage = document.getElementById('successMessage');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const loginIcon = document.getElementById('loginIcon');
-    const btnText = document.querySelector('.btn-text');
+    const statusMessage = document.getElementById('statusMessage');
     
-    function showMessage(message, type) {
+    function showStatus(message, type) {
+        statusMessage.textContent = message;
+        statusMessage.className = 'status-message ' + type;
+        
         if (type === 'error') {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-            successMessage.style.display = 'none';
-        } else if (type === 'success') {
-            successMessage.textContent = message;
-            successMessage.style.display = 'block';
-            errorMessage.style.display = 'none';
-        } else {
-            errorMessage.style.display = 'none';
-            successMessage.style.display = 'none';
-        }
-    }
-    
-    function setLoading(loading) {
-        loginBtn.disabled = loading;
-        if (loading) {
-            loadingSpinner.style.display = 'block';
-            loginIcon.style.display = 'none';
-            btnText.textContent = 'Verifying...';
-        } else {
-            loadingSpinner.style.display = 'none';
-            loginIcon.style.display = 'block';
-            btnText.textContent = 'Login';
+            setTimeout(() => {
+                passwordInput.value = '';
+                passwordInput.focus();
+            }, 1500);
         }
     }
     
@@ -41,17 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = passwordInput.value.trim();
         
         if (!password) {
-            showMessage('Please enter a password.', 'error');
             return;
         }
         
         if (password.length !== 4) {
-            showMessage('Password must be 4 characters.', 'error');
+            showStatus('Invalid access', 'error');
             return;
         }
         
-        showMessage('', '');
-        setLoading(true);
+        showStatus('Authenticating...', 'success');
         
         try {
             const response = await fetch('/api/verify-password', {
@@ -65,24 +42,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             if (response.ok && data.success) {
-                showMessage('Login successful! Redirecting...', 'success');
+                showStatus('Access granted', 'success');
                 setTimeout(() => {
                     window.location.href = '/';
-                }, 1000);
+                }, 500);
             } else {
-                showMessage('Invalid password. Please try again.', 'error');
-                passwordInput.value = '';
-                passwordInput.focus();
+                showStatus('Access denied', 'error');
             }
         } catch (error) {
             console.error('Login error:', error);
-            showMessage('An error occurred. Please try again.', 'error');
-        } finally {
-            setLoading(false);
+            showStatus('System error', 'error');
         }
     }
-    
-    loginBtn.addEventListener('click', login);
     
     passwordInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -92,10 +63,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     passwordInput.addEventListener('input', () => {
-        if (errorMessage.style.display === 'block') {
-            showMessage('', '');
+        if (statusMessage.className.includes('error')) {
+            statusMessage.textContent = '';
+            statusMessage.className = 'status-message';
         }
     });
     
     passwordInput.focus();
+    
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    const columns = Math.floor(canvas.width / 20);
+    const drops = [];
+    for (let i = 0; i < columns; i++) {
+        drops[i] = Math.random() * -100;
+    }
+    
+    function drawMatrix() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '15px monospace';
+        
+        for (let i = 0; i < drops.length; i++) {
+            const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+            ctx.fillText(text, i * 20, drops[i]);
+            
+            if (drops[i] > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+    
+    setInterval(drawMatrix, 50);
 });

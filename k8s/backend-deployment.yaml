@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: gibbersound-backend
-        image: fpinero/gibbersound-backend:0.3.2
+        image: fpinero/gibbersound-backend:0.4.0
         imagePullPolicy: Always
         ports:
         - containerPort: 5001
@@ -39,6 +39,11 @@ spec:
             secretKeyRef:
               name: deepseek-api-credentials
               key: DEEPSEEK_API_KEY
+        - name: FLASK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: deepseek-api-credentials
+              key: FLASK_SECRET_KEY
         livenessProbe:
           httpGet:
             path: /api/health
