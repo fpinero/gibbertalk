@@ -11,4 +11,5 @@ flask-cors==4.0.0
 httpx==0.25.0
 gunicorn==21.2.0
 python-dotenv==1.0.0
-# Eliminamos ggwave, numpy y scipy ya que usaremos ggwave.js en el frontend 
+pytz>=2023.3
+# Eliminamos ggwave, numpy y scipy ya que usaremos ggwave.js en el frontend

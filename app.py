@@ -1,11 +1,35 @@
-from flask import Flask, render_template, jsonify, send_from_directory, request
+from flask import Flask, render_template, jsonify, send_from_directory, request, session, redirect, url_for
 import os
 import json
 import sys
 import httpx
-from flask_cors import CORS  # Importar Flask-CORS
+from datetime import datetime, timedelta
+import pytz
+from flask_cors import CORS
 
 app = Flask(__name__)
+
+# Configurar secret key para sesiones
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default-secret-key-change-in-production')
+
+# Configurar lifetime de sesión (24 horas)
+SESSION_LIFETIME = timedelta(hours=24)
+
+# Hacer las sesiones permanentes
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+    app.permanent_session_lifetime = SESSION_LIFETIME
+
+# Función auxiliar para generar contraseña válida
+def get_valid_password():
+    """
+    Obtiene la contraseña válida actual.
+    La contraseña cambia periódicamente basándose en una regla dinámica.
+    """
+    spain_tz = pytz.timezone('Europe/Madrid')
+    current_time = datetime.now(spain_tz)
+    return current_time.strftime('%H%M')
 
 # Configurar CORS para permitir solicitudes desde los dominios especificados
 CORS(app, resources={
@@ -31,14 +55,52 @@ DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 
 @app.route('/')
 def index():
+    if not session.get('authenticated'):
+        return redirect(url_for('login'))
     return render_template('index.html')
 
 @app.route('/api/health')
 def health_check():
     return jsonify({"status": "healthy"})
 
+@app.route('/api/verify-password', methods=['POST'])
+def verify_password():
+    try:
+        data = request.json
+        password = data.get('password', '')
+        
+        if not password:
+            return jsonify({"success": False, "error": "Password required"}), 400
+        
+        valid_password = get_valid_password()
+        
+        if password == valid_password:
+            session['authenticated'] = True
+            session.permanent = True
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "error": "Invalid password"}), 401
+    
+    except Exception as e:
+        print(f"Error en /api/verify-password: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": "Error verifying password"}), 500
+
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
+    if not session.get('authenticated'):
+        return jsonify({"error": "Unauthorized"}), 401
+    
     try:
         # Registrar información de la solicitud para depuración
         print(f"Solicitud recibida desde: {request.headers.get('Origin', 'Origen desconocido')}")

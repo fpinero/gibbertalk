@@ -33,6 +33,7 @@ python test_deepseek.py
 # Required environment variables / Variables de entorno requeridas
 export FLASK_ENV=production
 export DEEPSEEK_API_KEY='your-api-key'
+export FLASK_SECRET_KEY='your-secret-key-for-sessions'
 ```
 
 ### Docker/Kubernetes Deployment / Despliegue Docker/Kubernetes
@@ -116,6 +117,38 @@ kubectl rollout restart deployment -n gibbersound gibbersound-backend
 - **Audio library**: ggwave.js for text-to-audio encoding
 - **AI API**: DeepSeek API for chat completions (deepseek-chat model)
 - **Nginx**: Frontend served via nginx:alpine with custom configuration
+
+---
+
+## Security / Seguridad
+
+The application requires authentication to access. Users must provide a valid password to use the service. The password is dynamically generated and changes periodically to enhance security.
+
+La aplicación requiere autenticación para acceder. Los usuarios deben proporcionar una contraseña válida para usar el servicio. La contraseña se genera dinámicamente y cambia periódicamente para mejorar la seguridad.
+
+### Authentication Endpoints / Endpoints de Autenticación
+
+- `GET /login`: Login page / Página de login
+- `POST /api/verify-password`: Verify password / Verificar contraseña
+- `GET /logout`: Logout and clear session / Cerrar sesión y limpiar variables de sesión
+
+### Session Management / Gestión de Sesiones
+
+- Sessions expire after 24 hours of inactivity / Las sesiones expiran después de 24 horas de inactividad
+- Session persistence: Permanent cookies / Persistencia de sesión: Cookies permanentes
+- Session storage: Server-side (Flask sessions) / Almacenamiento de sesión: En el servidor (sesiones de Flask)
+
+### Required Environment Variables / Variables de Entorno Requeridas
+
+```bash
+# Flask secret key for session encryption (required for production)
+# Clave secreta de Flask para encriptar sesiones (requerido para producción)
+export FLASK_SECRET_KEY='your-secret-key-here-change-in-production'
+
+# DeepSeek API key for AI functionality
+# Clave de API de DeepSeek para funcionalidad de IA
+export DEEPSEEK_API_KEY='your-deepseek-api-key'
+```
 
 ---
 
