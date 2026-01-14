@@ -175,3 +175,4 @@ k8s/deepseek-secret.yaml
 
 # Archivos de informes de GoAccess
 report_*.html
+.DS_Store
