@@ -27,7 +27,7 @@ spec:
           mountPath: /var/log/nginx
       containers:
       - name: frontend
-        image: fpinero/gibbersound-frontend:0.4.0
+        image: fpinero/gibbersound-frontend:0.3.2
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -42,34 +42,30 @@ spec:
           httpGet:
             path: /static/favicon/favicon.ico
             port: 80
-            initialDelaySeconds: 30
-            periodSeconds: 20
-            timeoutSeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /static/favicon/favicon.ico
             port: 80
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            timeoutSeconds: 5
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
         volumeMounts:
         - name: nginx-logs
           mountPath: /var/log/nginx
         - name: nginx-config
           mountPath: /etc/nginx/conf.d
-        env:
-        - name: FLASK_ENV
-          value: production
       volumes:
-        - name: nginx-logs
-          mountPath: /var/log/nginx
-          persistentVolumeClaim:
-            claimName: nginx-logs-pvc
-        - name: nginx-config
-          configMap:
-            name: frontend-nginx-config
-            items:
-              - key: default.conf
-                path: default.conf
-        nodeSelector:
-          kubernetes.io/arch: arm64
+      - name: nginx-logs
+        persistentVolumeClaim:
+          claimName: nginx-logs-pvc
+      - name: nginx-config
+        configMap:
+          name: frontend-nginx-config
+          items:
+          - key: default.conf
+            path: default.conf
+      nodeSelector:
+        kubernetes.io/arch: arm64 

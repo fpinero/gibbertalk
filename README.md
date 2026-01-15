@@ -19,6 +19,7 @@ GibberSound es una aplicación web que utiliza el protocolo ggwave para converti
 - Integración con DeepSeek AI para responder preguntas de los usuarios
 - Gestión robusta de errores y mecanismos de fallback
 - Sistema de visualización de audio en tiempo real
+- Página de login con clave de acceso que cambia dinámicamente
 
 ## Tecnologías utilizadas
 

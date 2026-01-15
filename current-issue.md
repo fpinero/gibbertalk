@@ -1,6 +1,6 @@
 # Problema Actual - Frontend Deployment No Funciona en Kubernetes
 
-## Fecha: 14/01/2026
+## Fecha: 15/01/2026
 ## Versión: v0.4.0
 ## Cluster Kubernetes: k3s v1.25.6+k3s1
 
@@ -666,5 +666,5 @@ El servidor local sigue funcionando correctamente, lo que confirma que el códig
 ---
 
 **Creado por**: OpenCode Assistant
-**Fecha**: 14/01/2026
+**Fecha**: 15/01/2026
 **Propósito**: Documentar el problema actual para retomar mañana con más contexto.
